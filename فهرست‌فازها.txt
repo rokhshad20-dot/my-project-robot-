@@ -1,0 +1,92 @@
+فاز یکم)رفع‌مشکلات‌بحرانی-تغییرات‌وبهبودها
+config.py(نسخهv2.1)باتنظیمات‌گمشده
+auto_retrain.py(نسخه‌v2.0)آموزش‌دوره‌ای‌مدل
+economic_filter.py(نسخه‌اصلاح‌شدهv2.0)فیلتراخباراقتصادی
+ensemble_model.py(نسخه‌حرفه‌‌ایv3.0)
+order_manager.pyمدیریت‌سفارش‌ها
+risk_manager.py(نسخه‌اصلاح‌شدهv2.1)
+run_enhanced_bot.py(نسخهv2.0)ربات‌اصلی‌بابهینه‌سازی‌ها
+train.py(نسخه‌اصلاح‌شدهv2.0)
+test_phase1.py(نسخه‌اصلاح‌شدv2.0)
+mt5_connection.py
+
+فاز دوم) بک‌تستینگ حرفه‌ای 
+backtester.py(موتوربک‌تستینگ‌حرفه‌ای‌باشبیه‌سازی‌کامل)
+run_backtest.py(اسکریپت‌اجرای بک‌تستینگ کامل‌استراتژی)
+test_backtest.py(تست‌کامل‌سیستمBacktesting)
+
+backtestingفاز دوم‌پیشرفته‌)-افزودن‌قابلیت‌های‌حرفه‌ای
+backtest_visualizer.py(تولیدنمودارهاوگزارش‌بصری‌برایBacktesting)
+monte_carlo.py(شبیه‌سازیMonte Carloبرای‌ارزیابی‌ریسک)
+run_advanced_backtest.py(پیشرفته‌بانمودارMonte CarloوWalk-Forward)
+walk_forward.py(بهینه‌سازیWalk-Forwardبرای‌تستOut-of-Sample)
+
+فاز سوم) سیستم‌لاگینگ‌آموزشی(Explainable
+log_viewer.py(ابزارمشاهده‌وآنالیزلاگ‌های‌آموزشی)
+explainable_logger.py(سیستم‌لاگینگ‌آموزشی-توضیح‌تصمیمات‌ربات)
+run_bot_explained.py(ربات‌باسیستم‌لاگینگ‌آموزشی‌کامل)
+
+فاز چهارم) داشبوردپیشرفته‌تعاملی
+(Tailwind CSSصفحه‌داشبورد)Frontend_index.html
+backend-main.pyداشبوردFastAPIبااحرازهویتJWT
+bot_manager.pyمدیریتProcessربات(Start,Stop,Status)
+JWT Token + Refreshصفحه‌ورودباFrontend_login.html
+
+فاز پنجم)تحلیل‌ترکیبی(Hybrid Analysis)
+integration_example.py(یکپارچه‌سازیHybrid Analyzerباربات)
+hybrid_analyzer.py(تحلیلگرترکیبیML+Technical Analysis)
+pattern_recognition.py(تشخیص‌الگوی‌کندلی(Candlestick Patterns)
+support_resistance.py(تشخیص‌سطوح‌حمایت‌ومقاومت)
+
+Feature Engineeringفاز ششم) پیشرفته
+advanced_features.py(Feature Engineering پیشرفته برای بهبود مدل ML)
+indicators.pyماژول‌اندیکاتورهای‌تکنیکال
+data_handler_v3.py(باویژگی‌های‌پیشرفته)
+
+فاز هفتم)مانیتورینگ‌وهشدار
+alert_system.py(سیستم‌هشدارجامع‌ربات)
+model_monitor.py(نظارت‌برعملکردمدلMLدرزمان‌واقعی)
+monitored_bot.py(ربات‌باسیستم‌مانیتورینگ‌وهشدارکامل)
+
+فاز هشتم)SL-TPپویا(Dynamic Stop Loss&Take Profit)
+bot_with_dynamic_sl.py(کامل‌ویکپارچه)
+dynamic_position_manager.py
+
+🧪Integrationفازنهم)تست‌های‌یونیت‌و
+run_tests.pyاجرای‌کامل‌تمام‌تست‌هاباگزارشCoverage
+tests-test_api.pyتستIntegrationبرایFastAPI
+testsـtest_config.pyتست‌واحدبرای‌تنظیمات
+tests-test_logger.pyتست‌واحدبرایExplainableLogger
+tests-test_monitor.pyتست‌واحدبرایModelMonitor
+
+
+فایلهای تکمیلی:
+
+Dark Mode 🌙
+frontend-assets-css-dark-mode.css
+frontend-assets-js-theme.js
+frontend-lndex.html
+
+سیستم‌تم‌های‌رنگی-6 تم‌آماده+Dark Mode
+frontend-assets-js-thems
+کامپوننت‌انتخاب‌تم‌-این‌کدبه‌داشبورداضافه‌شود(index.html)
+
+📊نمودارهای‌پیشرفته‌درداشبورد
+frontend-assets-charts.js
+
+PWA📱(Progressive Web App)
+frontend-index.htmlداشبورداصلی
+frontend-manifest.json
+frontend-service-worker.js Service WorkerبرایPWA
+
+📧ربات‌تلگرام
+telegram_bot.pyربات‌تلگرام‌برای‌دریافت‌اعلان‌هاوکنترل‌ربات
+
+🔔سیستم‌نوتیفیکیشن‌پیشرفته
+Frontend-assets-notifications.js
+
+🧪فایل‌تست‌داشبورد
+tests-test_dashboard.pyتست‌کامل‌داشبوردوFrontend
+
+
+
