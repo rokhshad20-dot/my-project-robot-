@@ -1,0 +1,990 @@
+"""
+====================================================================
+فایل: explainable_logger.py
+سیستم لاگینگ آموزشی و قابل فهم
+====================================================================
+این سیستم تمام تصمیمات ربات را با زبان ساده توضیح می‌دهد
+خروجی به Console، File و Database
+====================================================================
+"""
+
+import json
+import sqlite3
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Any
+from colorama import Fore, Style, Back, init
+
+# راه‌اندازی colorama
+init(autoreset=True)
+
+
+class ExplainableLogger:
+    """
+    سیستم لاگینگ آموزشی برای ربات
+    
+    ویژگی‌ها:
+    - لاگ رنگی به Console
+    - ذخیره در فایل JSON
+    - ذخیره در SQLite Database
+    - قابلیت جستجو و فیلتر
+    - توضیحات کامل تصمیمات
+    """
+    
+    def __init__(
+        self,
+        log_to_console: bool = True,
+        log_to_file: bool = True,
+        log_to_db: bool = True,
+        log_file: str = "data/logs/bot_logs.json",
+        db_file: str = "data/logs/bot_logs.db"
+    ):
+        """
+        مقداردهی اولیه Logger
+        
+        Args:
+            log_to_console: نمایش در ترمینال
+            log_to_file: ذخیره در فایل JSON
+            log_to_db: ذخیره در دیتابیس
+            log_file: مسیر فایل لاگ
+            db_file: مسیر دیتابیس
+        """
+        self.log_to_console = log_to_console
+        self.log_to_file = log_to_file
+        self.log_to_db = log_to_db
+        
+        # مسیرها
+        self.log_file = Path(log_file)
+        self.db_file = Path(db_file)
+        
+        # ساخت پوشه‌ها
+        self.log_file.parent.mkdir(parents=True, exist_ok=True)
+        self.db_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # راه‌اندازی دیتابیس
+        if self.log_to_db:
+            self._init_database()
+        
+        # شمارنده لاگ‌ها
+        self.log_count = 0
+        
+        print(f"{Fore.GREEN}✅ Logger راه‌اندازی شد")
+        print(f"   Console: {'✓' if log_to_console else '✗'}")
+        print(f"   File: {'✓' if log_to_file else '✗'}")
+        print(f"   Database: {'✓' if log_to_db else '✗'}")
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # توابع اصلی لاگینگ
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def log_market_snapshot(
+        self,
+        price: float,
+        atr: float,
+        adx: float,
+        rsi: float,
+        market_state: str
+    ):
+        """
+        ثبت وضعیت فعلی بازار
+        
+        Args:
+            price: قیمت فعلی
+            atr: میزان نوسان
+            adx: قدرت روند
+            rsi: شاخص RSI
+            market_state: توصیف وضعیت بازار
+        """
+        timestamp = datetime.now()
+        
+        # تحلیل وضعیت
+        volatility_label = self._volatility_label(atr)
+        trend_strength = self._trend_strength(adx)
+        rsi_zone = self._rsi_zone(rsi)
+        
+        # ساخت پیام رنگی
+        message = f"""
+{Fore.CYAN}{'━'*70}
+{Fore.CYAN}📊 وضعیت بازار - {timestamp.strftime('%Y-%m-%d %H:%M:%S')}
+{Fore.CYAN}{'━'*70}
+{Fore.WHITE}  💵 قیمت: {Fore.YELLOW}{price:.5f}
+{Fore.WHITE}  📊 ATR: {Fore.YELLOW}{atr:.5f} {Fore.GREEN}({volatility_label})
+{Fore.WHITE}  📈 ADX: {Fore.YELLOW}{adx:.1f} {Fore.GREEN}({trend_strength})
+{Fore.WHITE}  📉 RSI: {Fore.YELLOW}{rsi:.1f} {Fore.GREEN}({rsi_zone})
+{Fore.WHITE}  🎯 وضعیت: {Fore.MAGENTA}{market_state}
+{Fore.CYAN}{'━'*70}
+"""
+        
+        # لاگ کامل
+        log_data = {
+            'timestamp': timestamp.isoformat(),
+            'type': 'MARKET_SNAPSHOT',
+            'level': 'INFO',
+            'data': {
+                'price': price,
+                'atr': atr,
+                'atr_label': volatility_label,
+                'adx': adx,
+                'adx_label': trend_strength,
+                'rsi': rsi,
+                'rsi_label': rsi_zone,
+                'market_state': market_state
+            },
+            'message': f"بازار {market_state} - قیمت {price:.5f}"
+        }
+        
+        self._output(message, log_data)
+    
+    def log_ml_decision(
+        self,
+        prediction: float,
+        confidence: float,
+        direction: str,
+        reasoning: str
+    ):
+        """
+        ثبت تصمیم مدل Machine Learning
+        
+        Args:
+            prediction: پیش‌بینی خام (0-1)
+            confidence: درصد اطمینان
+            direction: جهت (BUY/SELL/NONE)
+            reasoning: دلیل تصمیم
+        """
+        timestamp = datetime.now()
+        
+        # رنگ بر اساس جهت
+        if direction == 'BUY':
+            dir_color = Fore.GREEN
+            icon = "🚀"
+        elif direction == 'SELL':
+            dir_color = Fore.RED
+            icon = "📉"
+        else:
+            dir_color = Fore.YELLOW
+            icon = "⏸️"
+        
+        # نوار اطمینان
+        confidence_bar = self._confidence_bar(confidence)
+        
+        message = f"""
+{Fore.BLUE}{'━'*70}
+{Fore.BLUE}🧠 تصمیم مدل ML - {timestamp.strftime('%H:%M:%S')}
+{Fore.BLUE}{'━'*70}
+{Fore.WHITE}  🎯 پیش‌بینی: {Fore.YELLOW}{prediction:.3f}
+{Fore.WHITE}  📊 اطمینان: {Fore.CYAN}{confidence*100:.1f}% {confidence_bar}
+{Fore.WHITE}  {icon} جهت: {dir_color}{direction}
+{Fore.WHITE}  💡 دلیل: {Fore.MAGENTA}{reasoning}
+{Fore.BLUE}{'━'*70}
+"""
+        
+        log_data = {
+            'timestamp': timestamp.isoformat(),
+            'type': 'ML_DECISION',
+            'level': 'INFO',
+            'data': {
+                'prediction': float(prediction),
+                'confidence': float(confidence),
+                'direction': direction,
+                'reasoning': reasoning
+            },
+            'message': f"ML: {direction} با اطمینان {confidence*100:.1f}%"
+        }
+        
+        self._output(message, log_data)
+    
+    def log_why_not_trade(
+        self,
+        reasons: List[str],
+        details: Optional[Dict] = None
+    ):
+        """
+        ثبت دلایل عدم معامله (مهم!)
+        
+        Args:
+            reasons: لیست دلایل
+            details: جزئیات اضافی
+        """
+        timestamp = datetime.now()
+        
+        message = f"""
+{Fore.RED}{'━'*70}
+{Fore.RED}❌ معامله انجام نشد - {timestamp.strftime('%H:%M:%S')}
+{Fore.RED}{'━'*70}
+{Fore.YELLOW}  📋 دلایل:
+"""
+        
+        for i, reason in enumerate(reasons, 1):
+            message += f"{Fore.WHITE}     {i}. {Fore.YELLOW}{reason}\n"
+        
+        if details:
+            message += f"\n{Fore.WHITE}  📊 جزئیات:\n"
+            for key, value in details.items():
+                message += f"{Fore.WHITE}     • {key}: {Fore.CYAN}{value}\n"
+        
+        message += f"{Fore.RED}{'━'*70}\n"
+        
+        log_data = {
+            'timestamp': timestamp.isoformat(),
+            'type': 'NO_TRADE',
+            'level': 'INFO',
+            'data': {
+                'reasons': reasons,
+                'details': details or {}
+            },
+            'message': f"معامله رد شد: {', '.join(reasons[:2])}"
+        }
+        
+        self._output(message, log_data)
+    
+    def log_trade_open(
+        self,
+        direction: str,
+        price: float,
+        volume: float,
+        sl: float,
+        tp: float,
+        reason: str,
+        risk_reward: float
+    ):
+        """
+        ثبت باز شدن معامله
+        
+        Args:
+            direction: خرید/فروش
+            price: قیمت ورود
+            volume: حجم
+            sl: Stop Loss
+            tp: Take Profit
+            reason: دلیل ورود
+            risk_reward: نسبت ریسک به ریوارد
+        """
+        timestamp = datetime.now()
+        
+        # رنگ بر اساس جهت
+        if direction == 'BUY':
+            color = Fore.GREEN
+            icon = "🚀"
+        else:
+            color = Fore.RED
+            icon = "📉"
+        
+        # محاسبه فاصله SL/TP
+        if direction == 'BUY':
+            sl_pips = (price - sl) * 10000
+            tp_pips = (tp - price) * 10000
+        else:
+            sl_pips = (sl - price) * 10000
+            tp_pips = (price - tp) * 10000
+        
+        message = f"""
+{color}{'━'*70}
+{color}{icon} معامله باز شد - {timestamp.strftime('%H:%M:%S')}
+{color}{'━'*70}
+{Fore.WHITE}  📊 جهت: {color}{direction}
+{Fore.WHITE}  💵 قیمت ورود: {Fore.YELLOW}{price:.5f}
+{Fore.WHITE}  📦 حجم: {Fore.CYAN}{volume:.2f} لات
+{Fore.WHITE}  🛡️ Stop Loss: {Fore.RED}{sl:.5f} {Fore.WHITE}({sl_pips:.1f} پیپ)
+{Fore.WHITE}  🎯 Take Profit: {Fore.GREEN}{tp:.5f} {Fore.WHITE}({tp_pips:.1f} پیپ)
+{Fore.WHITE}  ⚖️ Risk:Reward: {Fore.MAGENTA}1:{risk_reward:.2f}
+{Fore.WHITE}  💡 دلیل: {Fore.CYAN}{reason}
+{color}{'━'*70}
+"""
+        
+        log_data = {
+            'timestamp': timestamp.isoformat(),
+            'type': 'TRADE_OPEN',
+            'level': 'SUCCESS',
+            'data': {
+                'direction': direction,
+                'price': price,
+                'volume': volume,
+                'sl': sl,
+                'tp': tp,
+                'sl_pips': sl_pips,
+                'tp_pips': tp_pips,
+                'risk_reward': risk_reward,
+                'reason': reason
+            },
+            'message': f"باز شد: {direction} {volume:.2f} @ {price:.5f}"
+        }
+        
+        self._output(message, log_data)
+    
+    def log_trade_close(
+        self,
+        direction: str,
+        entry_price: float,
+        exit_price: float,
+        volume: float,
+        profit: float,
+        reason: str
+    ):
+        """
+        ثبت بسته شدن معامله
+        
+        Args:
+            direction: خرید/فروش
+            entry_price: قیمت ورود
+            exit_price: قیمت خروج
+            volume: حجم
+            profit: سود/ضرر
+            reason: دلیل بسته شدن
+        """
+        timestamp = datetime.now()
+        
+        # رنگ بر اساس سود/ضرر
+        if profit > 0:
+            color = Fore.GREEN
+            icon = "✅"
+            status = "سود"
+        elif profit < 0:
+            color = Fore.RED
+            icon = "❌"
+            status = "ضرر"
+        else:
+            color = Fore.YELLOW
+            icon = "⚪"
+            status = "برابر"
+        
+        # محاسبه پیپ
+        if direction == 'BUY':
+            pips = (exit_price - entry_price) * 10000
+        else:
+            pips = (entry_price - exit_price) * 10000
+        
+        message = f"""
+{color}{'━'*70}
+{color}{icon} معامله بسته شد - {timestamp.strftime('%H:%M:%S')}
+{color}{'━'*70}
+{Fore.WHITE}  📊 جهت: {Fore.CYAN}{direction}
+{Fore.WHITE}  💵 ورود: {Fore.YELLOW}{entry_price:.5f}
+{Fore.WHITE}  💵 خروج: {Fore.YELLOW}{exit_price:.5f}
+{Fore.WHITE}  📦 حجم: {Fore.CYAN}{volume:.2f} لات
+{Fore.WHITE}  📈 پیپ: {color}{pips:+.1f}
+{Fore.WHITE}  💰 سود/ضرر: {color}${profit:+.2f} {Fore.WHITE}({status})
+{Fore.WHITE}  💡 دلیل: {Fore.MAGENTA}{reason}
+{color}{'━'*70}
+"""
+        
+        log_data = {
+            'timestamp': timestamp.isoformat(),
+            'type': 'TRADE_CLOSE',
+            'level': 'SUCCESS' if profit >= 0 else 'WARNING',
+            'data': {
+                'direction': direction,
+                'entry_price': entry_price,
+                'exit_price': exit_price,
+                'volume': volume,
+                'pips': pips,
+                'profit': profit,
+                'reason': reason
+            },
+            'message': f"بسته شد: {direction} ${profit:+.2f} ({pips:+.1f} پیپ)"
+        }
+        
+        self._output(message, log_data)
+    
+    def log_position_update(
+        self,
+        ticket: int,
+        action: str,
+        details: str
+    ):
+        """
+        ثبت به‌روزرسانی پوزیشن
+        
+        Args:
+            ticket: شماره تیکت
+            action: نوع عملیات (BE, PARTIAL, TRAILING)
+            details: جزئیات
+        """
+        timestamp = datetime.now()
+        
+        # آیکون بر اساس نوع
+        if action == 'BREAK_EVEN':
+            icon = "🎯"
+            color = Fore.CYAN
+        elif action == 'PARTIAL_CLOSE':
+            icon = "💰"
+            color = Fore.GREEN
+        elif action == 'TRAILING_STOP':
+            icon = "📈"
+            color = Fore.MAGENTA
+        else:
+            icon = "🔄"
+            color = Fore.YELLOW
+        
+        message = f"""
+{color}{'─'*70}
+{color}{icon} به‌روزرسانی پوزیشن #{ticket} - {timestamp.strftime('%H:%M:%S')}
+{Fore.WHITE}  🔧 عملیات: {color}{action}
+{Fore.WHITE}  📝 جزئیات: {Fore.YELLOW}{details}
+{color}{'─'*70}
+"""
+        
+        log_data = {
+            'timestamp': timestamp.isoformat(),
+            'type': 'POSITION_UPDATE',
+            'level': 'INFO',
+            'data': {
+                'ticket': ticket,
+                'action': action,
+                'details': details
+            },
+            'message': f"پوزیشن #{ticket}: {action}"
+        }
+        
+        self._output(message, log_data)
+    
+    def log_error(
+        self,
+        error_type: str,
+        message: str,
+        suggestion: Optional[str] = None
+    ):
+        """
+        ثبت خطا
+        
+        Args:
+            error_type: نوع خطا
+            message: پیام خطا
+            suggestion: پیشنهاد رفع
+        """
+        timestamp = datetime.now()
+        
+        error_message = f"""
+{Fore.RED}{Back.WHITE}{'━'*70}
+{Fore.RED}{Back.WHITE}❌ خطا - {timestamp.strftime('%H:%M:%S')}
+{Fore.RED}{Back.WHITE}{'━'*70}
+{Fore.WHITE}  🔴 نوع: {Fore.RED}{error_type}
+{Fore.WHITE}  📝 پیام: {Fore.YELLOW}{message}
+"""
+        
+        if suggestion:
+            error_message += f"{Fore.WHITE}  💡 پیشنهاد: {Fore.GREEN}{suggestion}\n"
+        
+        error_message += f"{Fore.RED}{'━'*70}\n"
+        
+        log_data = {
+            'timestamp': timestamp.isoformat(),
+            'type': 'ERROR',
+            'level': 'ERROR',
+            'data': {
+                'error_type': error_type,
+                'message': message,
+                'suggestion': suggestion
+            },
+            'message': f"خطا: {error_type} - {message}"
+        }
+        
+        self._output(error_message, log_data)
+    
+    def log_warning(
+        self,
+        warning_type: str,
+        message: str
+    ):
+        """
+        ثبت هشدار
+        
+        Args:
+            warning_type: نوع هشدار
+            message: پیام هشدار
+        """
+        timestamp = datetime.now()
+        
+        warning_message = f"""
+{Fore.YELLOW}{'━'*70}
+{Fore.YELLOW}⚠️  هشدار - {timestamp.strftime('%H:%M:%S')}
+{Fore.YELLOW}{'━'*70}
+{Fore.WHITE}  🟡 نوع: {Fore.YELLOW}{warning_type}
+{Fore.WHITE}  📝 پیام: {Fore.CYAN}{message}
+{Fore.YELLOW}{'━'*70}
+"""
+        
+        log_data = {
+            'timestamp': timestamp.isoformat(),
+            'type': 'WARNING',
+            'level': 'WARNING',
+            'data': {
+                'warning_type': warning_type,
+                'message': message
+            },
+            'message': f"هشدار: {warning_type}"
+        }
+        
+        self._output(warning_message, log_data)
+    
+    def log_info(
+        self,
+        info_type: str,
+        message: str
+    ):
+        """
+        ثبت اطلاعات عمومی
+        
+        Args:
+            info_type: نوع اطلاعات
+            message: پیام
+        """
+        timestamp = datetime.now()
+        
+        info_message = f"""
+{Fore.CYAN}{'━'*70}
+{Fore.CYAN}ℹ️  اطلاعات - {timestamp.strftime('%H:%M:%S')}
+{Fore.CYAN}{'━'*70}
+{Fore.WHITE}  📌 نوع: {Fore.CYAN}{info_type}
+{Fore.WHITE}  📝 پیام: {Fore.WHITE}{message}
+{Fore.CYAN}{'━'*70}
+"""
+        
+        log_data = {
+            'timestamp': timestamp.isoformat(),
+            'type': 'INFO',
+            'level': 'INFO',
+            'data': {
+                'info_type': info_type,
+                'message': message
+            },
+            'message': message
+        }
+        
+        self._output(info_message, log_data)
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # توابع کمکی داخلی
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def _output(self, console_message: str, log_data: Dict):
+        """خروجی لاگ به مقاصد مختلف"""
+        self.log_count += 1
+        
+        # Console
+        if self.log_to_console:
+            print(console_message)
+        
+        # File (JSON)
+        if self.log_to_file:
+            self._save_to_file(log_data)
+        
+        # Database
+        if self.log_to_db:
+            self._save_to_db(log_data)
+    
+    def _save_to_file(self, log_data: Dict):
+        """ذخیره در فایل JSON"""
+        try:
+            # خواندن لاگ‌های موجود
+            if self.log_file.exists():
+                with open(self.log_file, 'r', encoding='utf-8') as f:
+                    logs = json.load(f)
+            else:
+                logs = []
+            
+            # اضافه کردن لاگ جدید
+            logs.append(log_data)
+            
+            # نگه‌داری فقط 1000 لاگ آخر (جلوگیری از بزرگ شدن فایل)
+            if len(logs) > 1000:
+                logs = logs[-1000:]
+            
+            # ذخیره
+            with open(self.log_file, 'w', encoding='utf-8') as f:
+                json.dump(logs, f, indent=2, ensure_ascii=False)
+        
+        except Exception as e:
+            print(f"{Fore.RED}⚠️  خطا در ذخیره لاگ به فایل: {e}")
+    
+    def _init_database(self):
+        """راه‌اندازی دیتابیس SQLite"""
+        try:
+            conn = sqlite3.connect(str(self.db_file))
+            cursor = conn.cursor()
+            
+            # جدول لاگ‌ها
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    level TEXT NOT NULL,
+                    message TEXT NOT NULL,
+                    data TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # ایندکس برای سرعت
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_timestamp 
+                ON logs(timestamp)
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_type 
+                ON logs(type)
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_level 
+                ON logs(level)
+            """)
+            
+            conn.commit()
+            conn.close()
+        
+        except Exception as e:
+            print(f"{Fore.RED}⚠️  خطا در راه‌اندازی دیتابیس: {e}")
+    
+    def _save_to_db(self, log_data: Dict):
+        """ذخیره در دیتابیس"""
+        try:
+            conn = sqlite3.connect(str(self.db_file))
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                INSERT INTO logs (timestamp, type, level, message, data)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                log_data['timestamp'],
+                log_data['type'],
+                log_data['level'],
+                log_data['message'],
+                json.dumps(log_data.get('data', {}), ensure_ascii=False)
+            ))
+            
+            conn.commit()
+            conn.close()
+        
+        except Exception as e:
+            print(f"{Fore.RED}⚠️  خطا در ذخیره لاگ به دیتابیس: {e}")
+    
+    def _volatility_label(self, atr: float) -> str:
+        """برچسب نوسان بر اساس ATR"""
+        if atr > 0.002:
+            return "نوسان بالا"
+        elif atr > 0.001:
+            return "نوسان متوسط"
+        else:
+            return "نوسان پایین"
+    
+    def _trend_strength(self, adx: float) -> str:
+        """برچسب قدرت روند بر اساس ADX"""
+        if adx > 40:
+            return "روند قوی"
+        elif adx > 25:
+            return "روند متوسط"
+        else:
+            return "بدون روند / رنج"
+    
+    def _rsi_zone(self, rsi: float) -> str:
+        """برچسب ناحیه RSI"""
+        if rsi > 70:
+            return "اشباع خرید"
+        elif rsi > 60:
+            return "صعودی"
+        elif rsi > 40:
+            return "خنثی"
+        elif rsi > 30:
+            return "نزولی"
+        else:
+            return "اشباع فروش"
+    
+    def _confidence_bar(self, confidence: float) -> str:
+        """نوار نمایش اطمینان"""
+        filled = int(confidence * 10)
+        empty = 10 - filled
+        return f"[{Fore.GREEN}{'█' * filled}{Fore.WHITE}{'░' * empty}{Style.RESET_ALL}]"
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # توابع Query و آنالیز
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def get_logs(
+        self,
+        log_type: Optional[str] = None,
+        level: Optional[str] = None,
+        limit: int = 100
+    ) -> List[Dict]:
+        """
+        دریافت لاگ‌ها از دیتابیس
+        
+        Args:
+            log_type: فیلتر بر اساس نوع
+            level: فیلتر بر اساس سطح
+            limit: تعداد
+        
+        Returns:
+            لیست لاگ‌ها
+        """
+        if not self.log_to_db:
+            return []
+        
+        try:
+            conn = sqlite3.connect(str(self.db_file))
+            cursor = conn.cursor()
+            
+            query = "SELECT * FROM logs WHERE 1=1"
+            params = []
+            
+            if log_type:
+                query += " AND type = ?"
+                params.append(log_type)
+            
+            if level:
+                query += " AND level = ?"
+                params.append(level)
+            
+            query += " ORDER BY id DESC LIMIT ?"
+            params.append(limit)
+            
+            cursor.execute(query, params)
+            
+            columns = [desc[0] for desc in cursor.description]
+            logs = []
+            
+            for row in cursor.fetchall():
+                log = dict(zip(columns, row))
+                # تبدیل data از JSON
+                if log['data']:
+                    log['data'] = json.loads(log['data'])
+                logs.append(log)
+            
+            conn.close()
+            return logs
+        
+        except Exception as e:
+            print(f"{Fore.RED}⚠️  خطا در دریافت لاگ‌ها: {e}")
+            return []
+    
+    def get_statistics(self) -> Dict:
+        """آمار کلی لاگ‌ها"""
+        if not self.log_to_db:
+            return {}
+        
+        try:
+            conn = sqlite3.connect(str(self.db_file))
+            cursor = conn.cursor()
+            
+            # تعداد کل
+            cursor.execute("SELECT COUNT(*) FROM logs")
+            total = cursor.fetchone()[0]
+            
+            # تعداد بر اساس نوع
+            cursor.execute("""
+                SELECT type, COUNT(*) as count 
+                FROM logs 
+                GROUP BY type
+            """)
+            by_type = dict(cursor.fetchall())
+            
+            # تعداد بر اساس سطح
+            cursor.execute("""
+                SELECT level, COUNT(*) as count 
+                FROM logs 
+                GROUP BY level
+            """)
+            by_level = dict(cursor.fetchall())
+            
+            # آخرین لاگ
+            cursor.execute("""
+                SELECT timestamp, type, message 
+                FROM logs 
+                ORDER BY id DESC 
+                LIMIT 1
+            """)
+            last_log = cursor.fetchone()
+            
+            conn.close()
+            
+            return {
+                'total_logs': total,
+                'by_type': by_type,
+                'by_level': by_level,
+                'last_log': {
+                    'timestamp': last_log[0],
+                    'type': last_log[1],
+                    'message': last_log[2]
+                } if last_log else None
+            }
+        
+        except Exception as e:
+            print(f"{Fore.RED}⚠️  خطا در محاسبه آمار: {e}")
+            return {}
+    
+    def cleanup_old_logs(self, days: int = 30):
+        """پاک‌سازی لاگ‌های قدیمی"""
+        if not self.log_to_db:
+            return
+        
+        try:
+            conn = sqlite3.connect(str(self.db_file))
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                DELETE FROM logs 
+                WHERE created_at < datetime('now', '-' || ? || ' days')
+            """, (days,))
+            
+            deleted = cursor.rowcount
+            conn.commit()
+            conn.close()
+            
+            print(f"{Fore.GREEN}✅ {deleted} لاگ قدیمی پاک شد")
+        
+        except Exception as e:
+            print(f"{Fore.RED}⚠️  خطا در پاک‌سازی: {e}")
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# تست سریع
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+if __name__ == "__main__":
+    print("\n" + "="*70)
+    print("🧪 تست سیستم لاگینگ آموزشی")
+    print("="*70)
+    
+    # ساخت logger
+    logger = ExplainableLogger(
+        log_to_console=True,
+        log_to_file=True,
+        log_to_db=True
+    )
+    
+    # تست 1: وضعیت بازار
+    print("\n📊 تست 1: وضعیت بازار")
+    logger.log_market_snapshot(
+        price=1.08750,
+        atr=0.00145,
+        adx=32.4,
+        rsi=62.3,
+        market_state="روند صعودی متوسط"
+    )
+    
+    # تست 2: تصمیم ML
+    print("\n🧠 تست 2: تصمیم ML")
+    logger.log_ml_decision(
+        prediction=0.742,
+        confidence=0.74,
+        direction='BUY',
+        reasoning="الگوی صعودی قوی + ADX بالای 25"
+    )
+    
+    # تست 3: عدم معامله
+    print("\n❌ تست 3: عدم معامله")
+    logger.log_why_not_trade(
+        reasons=[
+            "بازار در حال رنج است",
+            "ADX کمتر از 25",
+            "اسپرد غیرعادی"
+        ],
+        details={
+            'adx': 18.2,
+            'spread': 3.5,
+            'rsi': 49.3
+        }
+    )
+    
+    # تست 4: باز کردن معامله
+    print("\n🚀 تست 4: باز کردن معامله")
+    logger.log_trade_open(
+        direction='BUY',
+        price=1.08750,
+        volume=0.15,
+        sl=1.08600,
+        tp=1.09000,
+        reason="سیگنال ML + تأیید تکنیکال",
+        risk_reward=1.67
+    )
+    
+    # تست 5: به‌روزرسانی پوزیشن
+    print("\n🎯 تست 5: به‌روزرسانی پوزیشن")
+    logger.log_position_update(
+        ticket=12345,
+        action='BREAK_EVEN',
+        details='SL به قیمت ورود منتقل شد - سود فعلی: +20 پیپ'
+    )
+    
+    logger.log_position_update(
+        ticket=12345,
+        action='PARTIAL_CLOSE',
+        details='50% پوزیشن بسته شد - سود: +$45.50'
+    )
+    
+    # تست 6: بستن معامله
+    print("\n✅ تست 6: بستن معامله (سود)")
+    logger.log_trade_close(
+        direction='BUY',
+        entry_price=1.08750,
+        exit_price=1.08950,
+        volume=0.15,
+        profit=75.50,
+        reason='Take Profit Hit'
+    )
+    
+    print("\n❌ تست 7: بستن معامله (ضرر)")
+    logger.log_trade_close(
+        direction='SELL',
+        entry_price=1.09000,
+        exit_price=1.09150,
+        volume=0.10,
+        profit=-45.20,
+        reason='Stop Loss Hit'
+    )
+    
+    # تست 8: خطا
+    print("\n❌ تست 8: خطا")
+    logger.log_error(
+        error_type='MT5_CONNECTION',
+        message='نمی‌توان به MT5 متصل شد',
+        suggestion='MT5 را به عنوان Administrator اجرا کنید'
+    )
+    
+    # تست 9: هشدار
+    print("\n⚠️  تست 9: هشدار")
+    logger.log_warning(
+        warning_type='HIGH_DRAWDOWN',
+        message='ضرر روزانه به 4.2% رسید - نزدیک به حد مجاز'
+    )
+    
+    # تست 10: اطلاعات
+    print("\nℹ️  تست 10: اطلاعات")
+    logger.log_info(
+        info_type='BOT_STARTED',
+        message='ربات با موفقیت راه‌اندازی شد'
+    )
+    
+    # آمار
+    print("\n" + "="*70)
+    print("📊 آمار لاگ‌ها")
+    print("="*70)
+    
+    stats = logger.get_statistics()
+    print(f"\n📝 تعداد کل لاگ‌ها: {stats.get('total_logs', 0)}")
+    
+    print("\n📊 بر اساس نوع:")
+    for log_type, count in stats.get('by_type', {}).items():
+        print(f"   • {log_type}: {count}")
+    
+    print("\n📊 بر اساس سطح:")
+    for level, count in stats.get('by_level', {}).items():
+        print(f"   • {level}: {count}")
+    
+    # دریافت لاگ‌های اخیر
+    print("\n" + "="*70)
+    print("📋 لاگ‌های اخیر (5 عدد)")
+    print("="*70)
+    
+    recent_logs = logger.get_logs(limit=5)
+    for log in recent_logs:
+        print(f"\n[{log['timestamp']}] {log['type']}")
+        print(f"   {log['message']}")
+    
+    print("\n" + "="*70)
+    print("✅ تست کامل شد!")
+    print(f"📊 کل لاگ‌ها: {logger.log_count}")
+    print(f"📁 فایل: {logger.log_file}")
+    print(f"💾 دیتابیس: {logger.db_file}")
+    print("="*70)
