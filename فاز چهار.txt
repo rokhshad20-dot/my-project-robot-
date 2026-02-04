@@ -1,0 +1,1714 @@
+"""
+====================================================================
+فایل: backend/main.py
+داشبورد FastAPI با احراز هویت JWT
+====================================================================
+"""
+
+from fastapi import FastAP(Tailwind CSSصفحه‌داشبوردI, Depends, HTTPException, status, WebSocket
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, FileResponse
+from typing import Optional, List, Dict, Any
+from datetime import datetime, timedelta
+from pathlib import Path
+import jwt
+from passlib.context import CryptContext
+from pydantic import BaseModel
+import json
+import asyncio
+
+# Import های داخلی
+import sys
+sys.path.append(str(Path(__file__).parent.parent))
+from config import Config
+from explainable_logger import ExplainableLogger
+from model_monitor import ModelMonitor
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# تنظیمات
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# JWT Settings
+SECRET_KEY = "your-secret-key-change-this-in-production-2025"  # ⚠️ حتماً تغییر دهید!
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_EXPIRE_DAYS = 7
+
+# Password Hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+# Database (ساده - در تولید از PostgreSQL استفاده کنید)
+USERS_DB = {
+    "admin": {
+        "username": "admin",
+        "hashed_password": pwd_context.hash("admin123"),  # ⚠️ حتماً تغییر دهید!
+        "email": "admin@trading-bot.com",
+        "is_active": True,
+        "is_admin": True
+    }
+}
+
+# Failed Login Tracking
+failed_attempts = {}
+LOCKOUT_DURATION = 30  # دقیقه
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Pydantic Models
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+class TokenData(BaseModel):
+    username: Optional[str] = None
+
+class User(BaseModel):
+    username: str
+    email: Optional[str] = None
+    is_active: bool = True
+    is_admin: bool = False
+
+class UserInDB(User):
+    hashed_password: str
+
+class ConfigUpdate(BaseModel):
+    RISK_PER_TRADE: Optional[float] = None
+    MAX_DAILY_LOSS: Optional[float] = None
+    SL_ATR_MULTIPLIER: Optional[float] = None
+    TP_ATR_MULTIPLIER: Optional[float] = None
+    BUY_THRESHOLD: Optional[float] = None
+    SELL_THRESHOLD: Optional[float] = None
+    MIN_ADX: Optional[float] = None
+    BE_TRIGGER_ATR: Optional[float] = None
+    PARTIAL_CLOSE_TRIGGER_ATR: Optional[float] = None
+    PARTIAL_CLOSE_PERCENT: Optional[float] = None
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# FastAPI App
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+app = FastAPI(
+    title="Trading Bot Dashboard",
+    description="داشبورد حرفه‌ای ربات معامله‌گر با JWT",
+    version="2.0.0"
+)
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # در تولید فقط domain خودتان
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Static Files
+frontend_dir = Path(__file__).parent.parent / "frontend"
+app.mount("/assets", StaticFiles(directory=str(frontend_dir / "assets")), name="assets")
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Authentication Functions
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """بررسی رمز عبور"""
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password: str) -> str:
+    """Hash کردن رمز عبور"""
+    return pwd_context.hash(password)
+
+def get_user(username: str) -> Optional[UserInDB]:
+    """دریافت کاربر از دیتابیس"""
+    if username in USERS_DB:
+        user_dict = USERS_DB[username]
+        return UserInDB(**user_dict)
+    return None
+
+def authenticate_user(username: str, password: str) -> Optional[UserInDB]:
+    """احراز هویت کاربر"""
+    # بررسی قفل
+    if username in failed_attempts:
+        lockout_until, attempts = failed_attempts[username]
+        if datetime.now() < lockout_until:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"حساب قفل شده. {(lockout_until - datetime.now()).seconds // 60} دقیقه صبر کنید"
+            )
+    
+    user = get_user(username)
+    if not user:
+        return None
+    
+    if not verify_password(password, user.hashed_password):
+        # ثبت تلاش ناموفق
+        if username not in failed_attempts:
+            failed_attempts[username] = [datetime.now(), 1]
+        else:
+            lockout_until, attempts = failed_attempts[username]
+            attempts += 1
+            failed_attempts[username] = [lockout_until, attempts]
+            
+            # قفل بعد از 5 تلاش
+            if attempts >= 5:
+                lockout_until = datetime.now() + timedelta(minutes=LOCKOUT_DURATION)
+                failed_attempts[username] = [lockout_until, attempts]
+        
+        return None
+    
+    # پاک کردن تلاش‌های ناموفق
+    if username in failed_attempts:
+        del failed_attempts[username]
+    
+    return user
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+    """ساخت Access Token"""
+    to_encode = data.copy()
+    
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def create_refresh_token(data: dict) -> str:
+    """ساخت Refresh Token"""
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
+    """دریافت کاربر فعلی از Token"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="اطلاعات احراز هویت نامعتبر است",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        token_data = TokenData(username=username)
+    except jwt.PyJWTError:
+        raise credentials_exception
+    
+    user = get_user(username=token_data.username)
+    if user is None:
+        raise credentials_exception
+    
+    return user
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Routes - Authentication
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+@app.post("/api/token", response_model=Token)
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    """ورود و دریافت Token"""
+    user = authenticate_user(form_data.username, form_data.password)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="نام کاربری یا رمز عبور اشتباه است",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # ساخت Tokens
+    access_token = create_access_token(data={"sub": user.username})
+    refresh_token = create_refresh_token(data={"sub": user.username})
+    
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer"
+    }
+
+@app.post("/api/token/refresh", response_model=Token)
+async def refresh_token(refresh_token: str):
+    """تمدید Token با Refresh Token"""
+    try:
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Token نامعتبر")
+        
+        # ساخت Token جدید
+        access_token = create_access_token(data={"sub": username})
+        new_refresh_token = create_refresh_token(data={"sub": username})
+        
+        return {
+            "access_token": access_token,
+            "refresh_token": new_refresh_token,
+            "token_type": "bearer"
+        }
+    
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Token منقضی شده")
+
+@app.get("/api/users/me", response_model=User)
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    """دریافت اطلاعات کاربر فعلی"""
+    return current_user
+
+@app.post("/api/users/change-password")
+async def change_password(
+    password_data: PasswordChange,
+    current_user: User = Depends(get_current_user)
+):
+    """تغییر رمز عبور"""
+    user_db = get_user(current_user.username)
+    
+    # بررسی رمز فعلی
+    if not verify_password(password_data.current_password, user_db.hashed_password):
+        raise HTTPException(status_code=400, detail="رمز عبور فعلی اشتباه است")
+    
+    # تغییر رمز
+    USERS_DB[current_user.username]["hashed_password"] = get_password_hash(password_data.new_password)
+    
+    return {"message": "رمز عبور با موفقیت تغییر کرد"}
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Routes - Dashboard Data
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+@app.get("/api/status")
+async def get_bot_status(current_user: User = Depends(get_current_user)):
+    """دریافت وضعیت کلی ربات"""
+    # در اینجا باید از ربات واقعی اطلاعات بگیرید
+    # این یک نمونه است
+    return {
+        "bot_running": True,
+        "uptime_minutes": 1234,
+        "current_positions": 2,
+        "daily_trades": 5,
+        "daily_profit": 234.50,
+        "account_balance": 10234.50,
+        "account_equity": 10469.00,
+        "last_update": datetime.now().isoformat()
+    }
+
+@app.get("/api/config")
+async def get_config(current_user: User = Depends(get_current_user)) -> Dict:
+    """دریافت تنظیمات فعلی"""
+    return Config.to_dict()
+
+@app.put("/api/config")
+async def update_config(
+    config_update: ConfigUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """به‌روزرسانی تنظیمات"""
+    # فقط Admin
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="فقط Admin می‌تواند تنظیمات را تغییر دهد")
+    
+    # به‌روزرسانی
+    update_dict = config_update.dict(exclude_unset=True)
+    Config.update_from_dict(update_dict)
+    
+    # ذخیره
+    Config.save_to_file("config_custom.py")
+    
+    return {"message": "تنظیمات با موفقیت به‌روز شد", "updated_fields": list(update_dict.keys())}
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Routes - Bot Control (جدید!)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Import BotManager
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from bot_manager import BotManager
+
+bot_manager = BotManager()
+
+@app.post("/api/bot/start")
+async def start_bot(current_user: User = Depends(get_current_user)):
+    """شروع ربات"""
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="فقط Admin")
+    
+    result = bot_manager.start()
+    return result
+
+@app.post("/api/bot/stop")
+async def stop_bot(current_user: User = Depends(get_current_user)):
+    """توقف ربات"""
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="فقط Admin")
+    
+    result = bot_manager.stop()
+    return result
+
+@app.post("/api/bot/restart")
+async def restart_bot(current_user: User = Depends(get_current_user)):
+    """Restart ربات"""
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="فقط Admin")
+    
+    result = bot_manager.restart()
+    return result
+
+@app.get("/api/bot/status")
+async def get_bot_status_detailed(current_user: User = Depends(get_current_user)):
+    """دریافت وضعیت دقیق ربات"""
+    status = bot_manager.get_status()
+    return status
+
+@app.get("/api/monitoring/performance")
+async def get_performance(current_user: User = Depends(get_current_user)):
+    """دریافت عملکرد مدل"""
+    monitor = ModelMonitor()
+    
+    return {
+        "daily_metrics": monitor.calculate_daily_metrics(),
+        "status": monitor.get_performance_status(),
+        "should_retrain": monitor.should_retrain(),
+        "by_confidence": monitor.analyze_by_confidence(),
+        "confusion_matrix": monitor.get_confusion_matrix()
+    }
+
+@app.get("/api/logs")
+async def get_logs(
+    log_type: Optional[str] = None,
+    level: Optional[str] = None,
+    limit: int = 50,
+    current_user: User = Depends(get_current_user)
+):
+    """دریافت لاگ‌ها"""
+    logger = ExplainableLogger()
+    logs = logger.get_logs(log_type=log_type, level=level, limit=limit)
+    
+    return {"logs": logs, "total": len(logs)}
+
+@app.get("/api/logs/stats")
+async def get_log_stats(current_user: User = Depends(get_current_user)):
+    """آمار لاگ‌ها"""
+    logger = ExplainableLogger()
+    return logger.get_statistics()
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# WebSocket - Live Updates
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+active_connections: List[WebSocket] = []
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket برای Live Updates"""
+    await websocket.accept()
+    active_connections.append(websocket)
+    
+    try:
+        while True:
+            # ارسال داده هر 5 ثانیه
+            await asyncio.sleep(5)
+            
+            # داده‌های لحظه‌ای
+            data = {
+                "timestamp": datetime.now().isoformat(),
+                "status": "running",
+                "positions": 2,
+                "profit": 234.50
+            }
+            
+            await websocket.send_json(data)
+    
+    except Exception as e:
+        active_connections.remove(websocket)
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Routes - HTML Pages
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    """صفحه اصلی"""
+    return FileResponse(frontend_dir / "index.html")
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page():
+    """صفحه ورود"""
+    return FileResponse(frontend_dir / "login.html")
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# اجرا
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+if __name__ == "__main__":
+    import uvicorn
+    
+    print("\n" + "="*70)
+    print("🚀 داشبورد FastAPI + JWT")
+    print("="*70)
+    print(f"📊 آدرس: http://127.0.0.1:8000")
+    print(f"📚 Docs: http://127.0.0.1:8000/docs")
+    print(f"🔐 Username: admin")
+    print(f"🔑 Password: admin123")
+    print("="*70)
+    
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+
+
+
+
+
+
+"""
+====================================================================
+فایل: bot_manager.py
+مدیریت Process ربات (Start, Stop, Status)
+====================================================================
+"""
+
+import subprocess
+import psutil
+import json
+from pathlib import Path
+from datetime import datetime
+from typing import Optional, Dict
+import time
+
+
+class BotManager:
+    """
+    مدیر ربات - کنترل Start/Stop/Status
+    
+    استفاده:
+        manager = BotManager()
+        manager.start()
+        manager.stop()
+        status = manager.get_status()
+    """
+    
+    def __init__(self):
+        self.status_file = Path("data/bot_status.json")
+        self.pid_file = Path("data/bot.pid")
+        self.config_file = Path("config.py")
+        
+        # ساخت پوشه
+        self.status_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        # بارگذاری وضعیت
+        self._load_status()
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # کنترل ربات
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def start(self) -> Dict:
+        """
+        شروع ربات
+        
+        Returns:
+            Dict با وضعیت
+        """
+        # بررسی اگر قبلاً در حال اجراست
+        if self.is_running():
+            return {
+                "success": False,
+                "message": "ربات در حال اجراست",
+                "pid": self._get_pid()
+            }
+        
+        try:
+            # اجرای ربات به عنوان subprocess
+            process = subprocess.Popen(
+                ['python', 'bot_with_dynamic_sl.py'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if hasattr(subprocess, 'CREATE_NEW_PROCESS_GROUP') else 0
+            )
+            
+            # ذخیره PID
+            self._save_pid(process.pid)
+            
+            # ذخیره وضعیت
+            self._save_status({
+                "running": True,
+                "pid": process.pid,
+                "start_time": datetime.now().isoformat(),
+                "mode": "live"
+            })
+            
+            return {
+                "success": True,
+                "message": "ربات شروع شد",
+                "pid": process.pid
+            }
+        
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"خطا در شروع: {str(e)}"
+            }
+    
+    def stop(self) -> Dict:
+        """
+        توقف ربات
+        
+        Returns:
+            Dict با وضعیت
+        """
+        if not self.is_running():
+            return {
+                "success": False,
+                "message": "ربات در حال اجرا نیست"
+            }
+        
+        try:
+            pid = self._get_pid()
+            
+            # Kill کردن Process
+            if pid:
+                try:
+                    process = psutil.Process(pid)
+                    process.terminate()  # SIGTERM (Graceful)
+                    
+                    # صبر 5 ثانیه
+                    time.sleep(5)
+                    
+                    # اگر هنوز زنده است، Kill سخت
+                    if process.is_running():
+                        process.kill()  # SIGKILL (Force)
+                
+                except psutil.NoSuchProcess:
+                    pass  # قبلاً بسته شده
+            
+            # پاک کردن فایل‌ها
+            if self.pid_file.exists():
+                self.pid_file.unlink()
+            
+            # ذخیره وضعیت
+            self._save_status({
+                "running": False,
+                "pid": None,
+                "stop_time": datetime.now().isoformat()
+            })
+            
+            return {
+                "success": True,
+                "message": "ربات متوقف شد"
+            }
+        
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"خطا در توقف: {str(e)}"
+            }
+    
+    def restart(self) -> Dict:
+        """
+        Restart ربات
+        
+        Returns:
+            Dict با وضعیت
+        """
+        # ابتدا Stop
+        stop_result = self.stop()
+        
+        if not stop_result["success"]:
+            return stop_result
+        
+        # صبر 2 ثانیه
+        time.sleep(2)
+        
+        # حالا Start
+        return self.start()
+    
+    def is_running(self) -> bool:
+        """
+        بررسی اجرای ربات
+        
+        Returns:
+            True اگر در حال اجراست
+        """
+        pid = self._get_pid()
+        
+        if not pid:
+            return False
+        
+        try:
+            process = psutil.Process(pid)
+            return process.is_running()
+        except psutil.NoSuchProcess:
+            return False
+    
+    def get_status(self) -> Dict:
+        """
+        دریافت وضعیت کامل ربات
+        
+        Returns:
+            Dict شامل وضعیت، uptime، و ...
+        """
+        status = self._load_status()
+        
+        # بررسی واقعی
+        actually_running = self.is_running()
+        
+        # اگر فرق داشت، اصلاح کن
+        if status.get("running") != actually_running:
+            status["running"] = actually_running
+            self._save_status(status)
+        
+        # محاسبه uptime
+        if actually_running and "start_time" in status:
+            start_time = datetime.fromisoformat(status["start_time"])
+            uptime_seconds = (datetime.now() - start_time).total_seconds()
+            status["uptime_seconds"] = int(uptime_seconds)
+            status["uptime_formatted"] = self._format_uptime(uptime_seconds)
+        else:
+            status["uptime_seconds"] = 0
+            status["uptime_formatted"] = "0h 0m"
+        
+        return status
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # مدیریت تنظیمات
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def update_config(self, updates: Dict) -> Dict:
+        """
+        به‌روزرسانی تنظیمات
+        
+        Args:
+            updates: تنظیمات جدید (SYMBOL, TIMEFRAME, ...)
+        
+        Returns:
+            Dict با نتیجه
+        """
+        try:
+            # Import Config
+            from config import Config
+            
+            # به‌روزرسانی
+            Config.update_from_dict(updates)
+            
+            # ذخیره در فایل سفارشی
+            Config.save_to_file("config_custom.py")
+            
+            # اگر ربات در حال اجراست، Restart لازم است
+            needs_restart = self.is_running()
+            
+            return {
+                "success": True,
+                "message": "تنظیمات ذخیره شد",
+                "needs_restart": needs_restart,
+                "updated_fields": list(updates.keys())
+            }
+        
+        except Exception as e:
+            return {
+                "success": False,
+                "message": f"خطا در ذخیره: {str(e)}"
+            }
+    
+    def get_config(self) -> Dict:
+        """دریافت تنظیمات فعلی"""
+        try:
+            from config import Config
+            return Config.to_dict()
+        except Exception as e:
+            return {"error": str(e)}
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # توابع داخلی
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def _save_pid(self, pid: int):
+        """ذخیره PID"""
+        with open(self.pid_file, 'w') as f:
+            f.write(str(pid))
+    
+    def _get_pid(self) -> Optional[int]:
+        """دریافت PID"""
+        if not self.pid_file.exists():
+            return None
+        
+        try:
+            with open(self.pid_file, 'r') as f:
+                return int(f.read().strip())
+        except:
+            return None
+    
+    def _save_status(self, status: Dict):
+        """ذخیره وضعیت"""
+        with open(self.status_file, 'w') as f:
+            json.dump(status, f, indent=2)
+    
+    def _load_status(self) -> Dict:
+        """بارگذاری وضعیت"""
+        if not self.status_file.exists():
+            return {
+                "running": False,
+                "pid": None
+            }
+        
+        try:
+            with open(self.status_file, 'r') as f:
+                return json.load(f)
+        except:
+            return {
+                "running": False,
+                "pid": None
+            }
+    
+    def _format_uptime(self, seconds: float) -> str:
+        """فرمت uptime"""
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        return f"{hours}h {minutes}m"
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# تست
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+if __name__ == "__main__":
+    print("\n" + "="*70)
+    print("🎮 تست Bot Manager")
+    print("="*70)
+    
+    manager = BotManager()
+    
+    # وضعیت فعلی
+    status = manager.get_status()
+    print(f"\nوضعیت فعلی: {'🟢 در حال اجرا' if status['running'] else '🔴 متوقف'}")
+    
+    # منو
+    print("\n1. شروع ربات")
+    print("2. توقف ربات")
+    print("3. Restart")
+    print("4. وضعیت")
+    print("0. خروج")
+    
+    choice = input("\nانتخاب: ").strip()
+    
+    if choice == "1":
+        result = manager.start()
+        print(f"\n{'✅' if result['success'] else '❌'} {result['message']}")
+    
+    elif choice == "2":
+        result = manager.stop()
+        print(f"\n{'✅' if result['success'] else '❌'} {result['message']}")
+    
+    elif choice == "3":
+        result = manager.restart()
+        print(f"\n{'✅' if result['success'] else '❌'} {result['message']}")
+    
+    elif choice == "4":
+        status = manager.get_status()
+        print("\n📊 وضعیت:")
+        print(f"   در حال اجرا: {'✅' if status['running'] else '❌'}")
+        if status['running']:
+            print(f"   PID: {status.get('pid')}")
+            print(f"   Uptime: {status.get('uptime_formatted')}")
+    
+    print("\n" + "="*70)
+
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+frontend- index.html(Tailwind CSSصفحه‌داشبورد)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>داشبورد - ربات معامله‌گر</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Vazirmatn', sans-serif;
+        }
+        
+        .sidebar-transition {
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar-hidden {
+                transform: translateX(100%);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50" x-data="dashboardApp()" x-init="init()">
+    
+    <!-- Sidebar -->
+    <aside class="fixed right-0 top-0 h-full w-64 bg-gradient-to-b from-purple-600 to-purple-800 text-white shadow-2xl z-50 sidebar-transition"
+           :class="{'sidebar-hidden': !sidebarOpen}">
+        
+        <!-- Header -->
+        <div class="p-6 border-b border-white/20">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-robot text-3xl"></i>
+                    <div>
+                        <h2 class="font-bold text-lg">ربات معامله‌گر</h2>
+                        <p class="text-xs text-white/70">نسخه 2.0</p>
+                    </div>
+                </div>
+                <button @click="sidebarOpen = false" class="md:hidden">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Navigation -->
+        <nav class="p-4 space-y-2">
+            <a @click="currentPage = 'overview'" 
+               :class="currentPage === 'overview' ? 'bg-white/20' : 'hover:bg-white/10'"
+               class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition">
+                <i class="fas fa-home w-5"></i>
+                <span>خانه</span>
+            </a>
+            
+            <a @click="currentPage = 'config'" 
+               :class="currentPage === 'config' ? 'bg-white/20' : 'hover:bg-white/10'"
+               class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition">
+                <i class="fas fa-cog w-5"></i>
+                <span>تنظیمات</span>
+            </a>
+            
+            <a @click="currentPage = 'monitoring'" 
+               :class="currentPage === 'monitoring' ? 'bg-white/20' : 'hover:bg-white/10'"
+               class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition">
+                <i class="fas fa-chart-line w-5"></i>
+                <span>مانیتورینگ</span>
+            </a>
+            
+            <a @click="currentPage = 'logs'" 
+               :class="currentPage === 'logs' ? 'bg-white/20' : 'hover:bg-white/10'"
+               class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition">
+                <i class="fas fa-file-alt w-5"></i>
+                <span>لاگ‌ها</span>
+            </a>
+        </nav>
+        
+        <!-- User Profile -->
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/20">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <p class="font-medium" x-text="user.username"></p>
+                        <p class="text-xs text-white/70">مدیر</p>
+                    </div>
+                </div>
+                <button @click="logout()" class="hover:bg-white/10 p-2 rounded-lg transition">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+        
+    </aside>
+    
+    <!-- Main Content -->
+    <div class="md:mr-64 min-h-screen">
+        
+        <!-- Top Bar -->
+        <header class="bg-white shadow-sm sticky top-0 z-40">
+            <div class="flex items-center justify-between p-4">
+                <div class="flex items-center gap-4">
+                    <button @click="sidebarOpen = !sidebarOpen" class="md:hidden">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <h1 class="text-2xl font-bold text-gray-800">داشبورد</h1>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <!-- Status Badge -->
+                    <div class="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-sm font-medium">آنلاین</span>
+                    </div>
+                    
+                    <!-- Refresh -->
+                    <button @click="refreshData()" class="p-2 hover:bg-gray-100 rounded-lg transition">
+                        <i class="fas fa-sync-alt" :class="{'fa-spin': loading}"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Content Area -->
+        <main class="p-6">
+            
+            <!-- Overview Page -->
+            <div x-show="currentPage === 'overview'" x-transition>
+                
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    
+                    <!-- Card 1: Current Positions -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-chart-line text-blue-600 text-xl"></i>
+                            </div>
+                            <span class="text-sm text-gray-500">پوزیشن‌های باز</span>
+                        </div>
+                        <p class="text-3xl font-bold text-gray-800" x-text="status.current_positions || 0"></p>
+                        <p class="text-sm text-gray-500 mt-2">از 2 حداکثر</p>
+                    </div>
+                    
+                    <!-- Card 2: Daily Profit -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
+                            </div>
+                            <span class="text-sm text-gray-500">سود امروز</span>
+                        </div>
+                        <p class="text-3xl font-bold" 
+                           :class="(status.daily_profit || 0) >= 0 ? 'text-green-600' : 'text-red-600'"
+                           x-text="'$' + (status.daily_profit || 0).toFixed(2)"></p>
+                        <p class="text-sm text-gray-500 mt-2">
+                            <span x-text="status.daily_trades || 0"></span> معامله
+                        </p>
+                    </div>
+                    
+                    <!-- Card 3: Balance -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-wallet text-purple-600 text-xl"></i>
+                            </div>
+                            <span class="text-sm text-gray-500">موجودی</span>
+                        </div>
+                        <p class="text-3xl font-bold text-gray-800" 
+                           x-text="'$' + (status.account_balance || 0).toLocaleString()"></p>
+                        <p class="text-sm text-gray-500 mt-2">
+                            Equity: $<span x-text="(status.account_equity || 0).toLocaleString()"></span>
+                        </p>
+                    </div>
+                    
+                    <!-- Card 4: Uptime -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-clock text-orange-600 text-xl"></i>
+                            </div>
+                            <span class="text-sm text-gray-500">مدت اجرا</span>
+                        </div>
+                        <p class="text-3xl font-bold text-gray-800" x-text="formatUptime(status.uptime_minutes || 0)"></p>
+                        <p class="text-sm text-gray-500 mt-2">ساعت</p>
+                    </div>
+                    
+                </div>
+                
+                <!-- Chart -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">نمودار عملکرد</h3>
+                    <canvas id="performanceChart" height="80"></canvas>
+                </div>
+                
+                <!-- Recent Activity -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">فعالیت‌های اخیر</h3>
+                    <div class="space-y-4">
+                        <template x-for="log in recentLogs.slice(0, 5)" :key="log.id">
+                            <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+                                <div class="w-10 h-10 rounded-lg flex items-center justify-center"
+                                     :class="{
+                                         'bg-green-100 text-green-600': log.level === 'SUCCESS',
+                                         'bg-red-100 text-red-600': log.level === 'ERROR',
+                                         'bg-yellow-100 text-yellow-600': log.level === 'WARNING',
+                                         'bg-blue-100 text-blue-600': log.level === 'INFO'
+                                     }">
+                                    <i class="fas fa-info-circle"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="font-medium text-gray-800" x-text="log.message"></p>
+                                    <p class="text-sm text-gray-500" x-text="formatDate(log.timestamp)"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <!-- Config Page -->
+            <div x-show="currentPage === 'config'" x-transition>
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">تنظیمات معاملاتی</h2>
+                    
+                    <form @submit.prevent="saveConfig()" class="space-y-6">
+                        
+                        <!-- Symbol & Timeframe -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">نماد و تایم‌فریم</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        نماد معاملاتی
+                                    </label>
+                                    <select x-model="config.SYMBOL"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                        <option value="EURUSD">EURUSD</option>
+                                        <option value="GBPUSD">GBPUSD</option>
+                                        <option value="USDJPY">USDJPY</option>
+                                        <option value="AUDUSD">AUDUSD</option>
+                                        <option value="USDCAD">USDCAD</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        تایم‌فریم
+                                    </label>
+                                    <select x-model="config.TIMEFRAME_PRIMARY"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                        <option value="16385">M15 (15 دقیقه)</option>
+                                        <option value="16386">M30 (30 دقیقه)</option>
+                                        <option value="16388">H1 (1 ساعت)</option>
+                                        <option value="16392">H4 (4 ساعت)</option>
+                                        <option value="16408">D1 (روزانه)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Risk Management -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">مدیریت ریسک</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        ریسک هر معامله (%)
+                                    </label>
+                                    <input type="number" step="0.001" x-model="config.RISK_PER_TRADE"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                    <p class="text-xs text-gray-500 mt-1">توصیه: 0.01 (1%)</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        حداکثر ضرر روزانه (%)
+                                    </label>
+                                    <input type="number" step="0.01" x-model="config.MAX_DAILY_LOSS"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                    <p class="text-xs text-gray-500 mt-1">توصیه: 0.05 (5%)</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- SL/TP -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">Stop Loss & Take Profit</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        SL (x ATR)
+                                    </label>
+                                    <input type="number" step="0.1" x-model="config.SL_ATR_MULTIPLIER"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        TP (x ATR)
+                                    </label>
+                                    <input type="number" step="0.1" x-model="config.TP_ATR_MULTIPLIER"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ML Thresholds -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">آستانه‌های ML</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        آستانه خرید
+                                    </label>
+                                    <input type="number" step="0.01" x-model="config.BUY_THRESHOLD"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        آستانه فروش
+                                    </label>
+                                    <input type="number" step="0.01" x-model="config.SELL_THRESHOLD"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Save Button -->
+                        <div class="flex gap-4">
+                            <button type="submit" 
+                                    :disabled="loading"
+                                    class="px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition disabled:opacity-50">
+                                <i class="fas fa-save ml-2"></i>
+                                ذخیره تنظیمات
+                            </button>
+                            <button type="button" @click="loadConfig()"
+                                    class="px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition">
+                                <i class="fas fa-undo ml-2"></i>
+                                بازگشت
+                            </button>
+                        </div>
+                        
+                        <!-- Warning -->
+                        <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <p class="text-sm text-yellow-800">
+                                <i class="fas fa-exclamation-triangle ml-2"></i>
+                                <strong>توجه:</strong> بعد از تغییر تنظیمات، ربات را Restart کنید.
+                            </p>
+                        </div>
+                        
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Monitoring Page -->
+            <div x-show="currentPage === 'monitoring'" x-transition>
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">مانیتورینگ مدل</h2>
+                    <p class="text-gray-600">در حال توسعه...</p>
+                </div>
+            </div>
+            
+            <!-- Logs Page -->
+            <div x-show="currentPage === 'logs'" x-transition>
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">لاگ‌ها</h2>
+                    <div class="space-y-4">
+                        <template x-for="log in recentLogs" :key="log.id">
+                            <div class="p-4 border border-gray-200 rounded-lg">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="font-medium" x-text="log.type"></span>
+                                    <span class="text-sm text-gray-500" x-text="formatDate(log.timestamp)"></span>
+                                </div>
+                                <p class="text-gray-700" x-text="log.message"></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+        
+    </div>
+    
+    <script>
+        function dashboardApp() {
+            return {
+                // State
+                sidebarOpen: true,
+                currentPage: 'overview',
+                loading: false,
+                user: {},
+                status: {},
+                config: {},
+                recentLogs: [],
+                chart: null,
+                botStatus: {
+                    running: false,
+                    uptime_formatted: '0h 0m'
+                },
+                
+                // Initialize
+                async init() {
+                    // Check auth
+                    const token = localStorage.getItem('access_token');
+                    if (!token) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    
+                    // Load data
+                    await this.loadUser();
+                    await this.refreshData();
+                    
+                    // Setup chart
+                    this.setupChart();
+                    
+                    // Auto-refresh every 5 seconds
+                    setInterval(() => this.refreshData(), 5000);
+                },
+                
+                // Load user info
+                async loadUser() {
+                    try {
+                        const response = await this.apiCall('/api/users/me');
+                        this.user = response;
+                    } catch (error) {
+                        console.error('Failed to load user:', error);
+                        this.logout();
+                    }
+                },
+                
+                // Refresh all data
+                async refreshData() {
+                    this.loading = true;
+                    try {
+                        await Promise.all([
+                            this.loadStatus(),
+                            this.loadBotStatus(),
+                            this.loadConfig(),
+                            this.loadLogs()
+                        ]);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                // Load bot status from bot_manager
+                async loadBotStatus() {
+                    try {
+                        const data = await this.apiCall('/api/bot/status');
+                        this.botStatus = data;
+                    } catch (error) {
+                        console.error('Failed to load bot status:', error);
+                    }
+                },
+                
+                // Load bot status
+                async loadStatus() {
+                    const data = await this.apiCall('/api/status');
+                    this.status = data;
+                },
+                
+                // Load config
+                async loadConfig() {
+                    const data = await this.apiCall('/api/config');
+                    this.config = data;
+                },
+                
+                // Save config
+                async saveConfig() {
+                    try {
+                        this.loading = true;
+                        const data = await this.apiCall('/api/config', 'PUT', this.config);
+                        
+                        if (data.needs_restart) {
+                            if (confirm('⚠️ ربات در حال اجراست. Restart کنیم؟')) {
+                                await this.restartBot();
+                            }
+                        }
+                        
+                        alert('✅ تنظیمات ذخیره شد');
+                    } catch (error) {
+                        alert('❌ خطا در ذخیره');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                // Bot control functions
+                async startBot() {
+                    if (!confirm('آیا مطمئنید که می‌خواهید ربات را شروع کنید؟')) return;
+                    
+                    this.loading = true;
+                    try {
+                        const result = await this.apiCall('/api/bot/start', 'POST');
+                        if (result.success) {
+                            alert('✅ ' + result.message);
+                            await this.loadBotStatus();
+                        } else {
+                            alert('❌ ' + result.message);
+                        }
+                    } catch (error) {
+                        alert('❌ خطا: ' + error.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async stopBot() {
+                    if (!confirm('⚠️ آیا مطمئنید که می‌خواهید ربات را متوقف کنید؟')) return;
+                    
+                    this.loading = true;
+                    try {
+                        const result = await this.apiCall('/api/bot/stop', 'POST');
+                        if (result.success) {
+                            alert('✅ ' + result.message);
+                            await this.loadBotStatus();
+                        } else {
+                            alert('❌ ' + result.message);
+                        }
+                    } catch (error) {
+                        alert('❌ خطا: ' + error.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async restartBot() {
+                    if (!confirm('🔄 آیا مطمئنید که می‌خواهید ربات را Restart کنید؟')) return;
+                    
+                    this.loading = true;
+                    try {
+                        const result = await this.apiCall('/api/bot/restart', 'POST');
+                        if (result.success) {
+                            alert('✅ ' + result.message);
+                            await this.loadBotStatus();
+                        } else {
+                            alert('❌ ' + result.message);
+                        }
+                    } catch (error) {
+                        alert('❌ خطا: ' + error.message);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                // Load logs
+                async loadLogs() {
+                    const data = await this.apiCall('/api/logs?limit=10');
+                    this.recentLogs = data.logs || [];
+                },
+                
+                // API Call with JWT
+                async apiCall(url, method = 'GET', body = null) {
+                    const token = localStorage.getItem('access_token');
+                    
+                    const options = {
+                        method,
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    };
+                    
+                    if (body) {
+                        options.body = JSON.stringify(body);
+                    }
+                    
+                    const response = await fetch(url, options);
+                    
+                    if (response.status === 401) {
+                        // Token expired
+                        this.logout();
+                        throw new Error('Unauthorized');
+                    }
+                    
+                    return response.json();
+                },
+                
+                // Setup Chart
+                setupChart() {
+                    const ctx = document.getElementById('performanceChart');
+                    if (ctx) {
+                        this.chart = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: ['دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'],
+                                datasets: [{
+                                    label: 'سود/ضرر',
+                                    data: [120, -50, 200, 150, 234],
+                                    borderColor: 'rgb(147, 51, 234)',
+                                    tension: 0.4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false
+                            }
+                        });
+                    }
+                },
+                
+                // Logout
+                logout() {
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    window.location.href = '/login';
+                },
+                
+                // Utils
+                formatUptime(minutes) {
+                    const hours = Math.floor(minutes / 60);
+                    return hours.toFixed(1);
+                },
+                
+                formatDate(timestamp) {
+                    return new Date(timestamp).toLocaleString('fa-IR');
+                }
+            }
+        }
+    </script>
+    
+</body>
+</html>
+
+
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Frontend_login.html(JWT Token+Refreshصفحه‌ورودبا)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ورود - داشبورد ربات معامله‌گر</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Vazirmatn', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    
+    <div x-data="loginApp()" class="w-full max-w-md">
+        
+        <!-- Logo & Title -->
+        <div class="text-center mb-8">
+            <div class="inline-block p-4 bg-white/20 rounded-full mb-4">
+                <i class="fas fa-robot text-5xl text-white"></i>
+            </div>
+            <h1 class="text-4xl font-bold text-white mb-2">ربات معامله‌گر</h1>
+            <p class="text-white/80">داشبورد مدیریت هوشمند</p>
+        </div>
+        
+        <!-- Login Card -->
+        <div class="glass-effect rounded-2xl shadow-2xl p-8">
+            
+            <!-- Alert -->
+            <div x-show="error" 
+                 x-transition
+                 class="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-white">
+                <i class="fas fa-exclamation-circle ml-2"></i>
+                <span x-text="error"></span>
+            </div>
+            
+            <div x-show="lockout" 
+                 x-transition
+                 class="mb-6 p-4 bg-yellow-500/20 border border-yellow-500/50 rounded-lg text-white">
+                <i class="fas fa-lock ml-2"></i>
+                <span>حساب قفل شده. لطفاً <span x-text="lockoutMinutes"></span> دقیقه صبر کنید.</span>
+            </div>
+            
+            <!-- Form -->
+            <form @submit.prevent="login" class="space-y-6">
+                
+                <!-- Username -->
+                <div>
+                    <label class="block text-white/90 text-sm font-medium mb-2">
+                        <i class="fas fa-user ml-2"></i>
+                        نام کاربری
+                    </label>
+                    <input 
+                        type="text" 
+                        x-model="username"
+                        required
+                        class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50 transition"
+                        placeholder="admin"
+                    >
+                </div>
+                
+                <!-- Password -->
+                <div>
+                    <label class="block text-white/90 text-sm font-medium mb-2">
+                        <i class="fas fa-lock ml-2"></i>
+                        رمز عبور
+                    </label>
+                    <div class="relative">
+                        <input 
+                            :type="showPassword ? 'text' : 'password'" 
+                            x-model="password"
+                            required
+                            class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50 transition"
+                            placeholder="••••••••"
+                        >
+                        <button 
+                            type="button"
+                            @click="showPassword = !showPassword"
+                            class="absolute left-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white"
+                        >
+                            <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Remember Me -->
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            x-model="rememberMe"
+                            class="w-4 h-4 rounded border-white/20 bg-white/10 text-purple-600 focus:ring-2 focus:ring-white/50"
+                        >
+                        <span class="mr-2 text-white/90 text-sm">مرا به خاطر بسپار</span>
+                    </label>
+                </div>
+                
+                <!-- Submit Button -->
+                <button 
+                    type="submit"
+                    :disabled="loading"
+                    class="w-full py-3 bg-white text-purple-600 font-semibold rounded-lg hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-white/50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <span x-show="!loading">
+                        <i class="fas fa-sign-in-alt ml-2"></i>
+                        ورود به داشبورد
+                    </span>
+                    <span x-show="loading">
+                        <i class="fas fa-spinner fa-spin ml-2"></i>
+                        در حال ورود...
+                    </span>
+                </button>
+                
+            </form>
+            
+            <!-- Info -->
+            <div class="mt-6 pt-6 border-t border-white/20">
+                <p class="text-white/70 text-sm text-center">
+                    <i class="fas fa-shield-alt ml-1"></i>
+                    محافظت شده با JWT و bcrypt
+                </p>
+            </div>
+            
+        </div>
+        
+        <!-- Footer -->
+        <div class="text-center mt-8 text-white/60 text-sm">
+            <p>نسخه 2.0.0 - طراحی شده با ❤️</p>
+        </div>
+        
+    </div>
+    
+    <script>
+        function loginApp() {
+            return {
+                username: '',
+                password: '',
+                rememberMe: false,
+                showPassword: false,
+                loading: false,
+                error: '',
+                lockout: false,
+                lockoutMinutes: 0,
+                
+                async login() {
+                    this.loading = true;
+                    this.error = '';
+                    this.lockout = false;
+                    
+                    try {
+                        // ساخت FormData
+                        const formData = new FormData();
+                        formData.append('username', this.username);
+                        formData.append('password', this.password);
+                        
+                        // ارسال درخواست
+                        const response = await fetch('/api/token', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok) {
+                            // ذخیره Tokens
+                            localStorage.setItem('access_token', data.access_token);
+                            localStorage.setItem('refresh_token', data.refresh_token);
+                            
+                            if (this.rememberMe) {
+                                localStorage.setItem('remember_me', 'true');
+                            }
+                            
+                            // انیمیشن موفقیت
+                            this.showSuccessAnimation();
+                            
+                            // هدایت به داشبورد
+                            setTimeout(() => {
+                                window.location.href = '/';
+                            }, 1000);
+                            
+                        } else {
+                            // خطا
+                            if (response.status === 403) {
+                                // قفل شده
+                                this.lockout = true;
+                                const lockoutMatch = data.detail.match(/(\d+) دقیقه/);
+                                this.lockoutMinutes = lockoutMatch ? lockoutMatch[1] : 30;
+                            } else {
+                                this.error = data.detail || 'خطا در ورود';
+                            }
+                        }
+                        
+                    } catch (error) {
+                        console.error('Login error:', error);
+                        this.error = 'خطا در اتصال به سرور';
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                showSuccessAnimation() {
+                    // می‌توانید اینجا انیمیشن موفقیت اضافه کنید
+                    console.log('✅ ورود موفق!');
+                }
+            }
+        }
+    </script>
+    
+</body>
+</html>
+
+
+
+

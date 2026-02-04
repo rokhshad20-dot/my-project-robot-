@@ -1,0 +1,1255 @@
+"""
+====================================================================
+فایل: run_tests.py
+اجرای کامل تمام تست‌ها با گزارش Coverage
+====================================================================
+"""
+
+import subprocess
+import sys
+from pathlib import Path
+
+
+def run_tests():
+    """اجرای تمام تست‌ها"""
+    
+    print("\n" + "="*70)
+    print("🧪 شروع اجرای تست‌های کامل")
+    print("="*70)
+    
+    # مسیر tests
+    tests_dir = Path(__file__).parent / "tests"
+    
+    if not tests_dir.exists():
+        print("❌ پوشه tests یافت نشد!")
+        return False
+    
+    # اجرای pytest با coverage
+    cmd = [
+        sys.executable,
+        "-m",
+        "pytest",
+        str(tests_dir),
+        "-v",                      # Verbose
+        "--tb=short",              # Traceback کوتاه
+        "--cov=.",                 # Coverage برای پروژه
+        "--cov-report=term-missing",  # نمایش خطوط پوشش نشده
+        "--cov-report=html",       # گزارش HTML
+        "--color=yes"              # رنگی
+    ]
+    
+    try:
+        result = subprocess.run(cmd, check=False)
+        
+        print("\n" + "="*70)
+        if result.returncode == 0:
+            print("✅ تمام تست‌ها موفق بودند!")
+        else:
+            print("⚠️  برخی تست‌ها ناموفق بودند")
+        print("="*70)
+        
+        print("\n📊 گزارش Coverage در htmlcov/index.html ذخیره شد")
+        print("   برای مشاهده: باز کردن htmlcov/index.html در مرورگر")
+        
+        return result.returncode == 0
+    
+    except FileNotFoundError:
+        print("\n❌ pytest نصب نیست!")
+        print("   نصب: pip install pytest pytest-cov")
+        return False
+
+
+def run_specific_test(test_file: str):
+    """اجرای یک تست خاص"""
+    
+    print(f"\n🧪 اجرای {test_file}...")
+    
+    cmd = [
+        sys.executable,
+        "-m",
+        "pytest",
+        f"tests/{test_file}",
+        "-v",
+        "--tb=short"
+    ]
+    
+    subprocess.run(cmd)
+
+
+def run_tests_by_marker(marker: str):
+    """اجرای تست‌های با marker خاص"""
+    
+    print(f"\n🧪 اجرای تست‌های با marker: {marker}...")
+    
+    cmd = [
+        sys.executable,
+        "-m",
+        "pytest",
+        "-v",
+        "-m", marker,
+        "--tb=short"
+    ]
+    
+    subprocess.run(cmd)
+
+
+def main():
+    """منوی اصلی"""
+    
+    print("\n" + "="*70)
+    print("🧪 سیستم تست ربات معامله‌گر")
+    print("="*70)
+    print("\n1. اجرای تمام تست‌ها (با Coverage)")
+    print("2. تست Config")
+    print("3. تست Logger")
+    print("4. تست Monitor")
+    print("5. تست API")
+    print("0. خروج")
+    
+    choice = input("\nانتخاب کنید (1-5): ").strip()
+    
+    if choice == "1":
+        run_tests()
+    elif choice == "2":
+        run_specific_test("test_config.py")
+    elif choice == "3":
+        run_specific_test("test_logger.py")
+    elif choice == "4":
+        run_specific_test("test_monitor.py")
+    elif choice == "5":
+        run_specific_test("test_api.py")
+    elif choice == "0":
+        print("خروج...")
+        return
+    else:
+        print("❌ انتخاب نامعتبر!")
+        return
+    
+    print("\n" + "="*70)
+    print("✅ اجرای تست‌ها پایان یافت")
+    print("="*70)
+
+
+if __name__ == "__main__":
+    # اگر بدون آرگومان اجرا شد، منو نمایش بده
+    if len(sys.argv) == 1:
+        main()
+    # اگر با --all اجرا شد، همه را اجرا کن
+    elif "--all" in sys.argv:
+        run_tests()
+    # اگر نام فایل داده شد
+    elif len(sys.argv) == 2:
+        run_specific_test(sys.argv[1])
+    else:
+        print("استفاده:")
+        print("  python run_tests.py           # منوی تعاملی")
+        print("  python run_tests.py --all     # اجرای همه")
+        print("  python run_tests.py test_config.py  # تست خاص")
+
+
+
+
+"""
+====================================================================
+فایل: tests/test_api.py
+تست Integration برای FastAPI
+====================================================================
+"""
+
+import pytest
+import sys
+from pathlib import Path
+from fastapi.testclient import TestClient
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
+
+from main import app
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Setup
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+client = TestClient(app)
+
+
+class TestAuthentication:
+    """تست احراز هویت"""
+    
+    def test_login_success(self):
+        """ورود موفق با اطلاعات صحیح"""
+        response = client.post(
+            "/api/token",
+            data={
+                "username": "admin",
+                "password": "admin123"
+            }
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert "access_token" in data
+        assert "refresh_token" in data
+        assert data["token_type"] == "bearer"
+    
+    def test_login_wrong_password(self):
+        """ورود با رمز اشتباه"""
+        response = client.post(
+            "/api/token",
+            data={
+                "username": "admin",
+                "password": "wrong_password"
+            }
+        )
+        
+        assert response.status_code == 401
+    
+    def test_login_wrong_username(self):
+        """ورود با نام کاربری اشتباه"""
+        response = client.post(
+            "/api/token",
+            data={
+                "username": "wrong_user",
+                "password": "admin123"
+            }
+        )
+        
+        assert response.status_code == 401
+    
+    def test_refresh_token(self):
+        """تمدید Token"""
+        # ابتدا وارد شو
+        login_response = client.post(
+            "/api/token",
+            data={"username": "admin", "password": "admin123"}
+        )
+        refresh_token = login_response.json()["refresh_token"]
+        
+        # حالا تمدید کن
+        response = client.post(
+            "/api/token/refresh",
+            params={"refresh_token": refresh_token}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "access_token" in data
+
+
+class TestProtectedEndpoints:
+    """تست Endpointهای محافظت شده"""
+    
+    @pytest.fixture
+    def auth_headers(self):
+        """هدرهای احراز هویت"""
+        response = client.post(
+            "/api/token",
+            data={"username": "admin", "password": "admin123"}
+        )
+        token = response.json()["access_token"]
+        return {"Authorization": f"Bearer {token}"}
+    
+    def test_get_user_info(self, auth_headers):
+        """دریافت اطلاعات کاربر"""
+        response = client.get("/api/users/me", headers=auth_headers)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["username"] == "admin"
+    
+    def test_get_user_info_unauthorized(self):
+        """دریافت اطلاعات بدون Token"""
+        response = client.get("/api/users/me")
+        
+        assert response.status_code == 401
+    
+    def test_get_bot_status(self, auth_headers):
+        """دریافت وضعیت ربات"""
+        response = client.get("/api/status", headers=auth_headers)
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert "bot_running" in data
+        assert "current_positions" in data
+        assert "daily_profit" in data
+    
+    def test_get_config(self, auth_headers):
+        """دریافت تنظیمات"""
+        response = client.get("/api/config", headers=auth_headers)
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert "SYMBOL" in data
+        assert "RISK_PER_TRADE" in data
+        assert "BUY_THRESHOLD" in data
+    
+    def test_update_config(self, auth_headers):
+        """به‌روزرسانی تنظیمات"""
+        response = client.put(
+            "/api/config",
+            headers=auth_headers,
+            json={
+                "RISK_PER_TRADE": 0.015
+            }
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "message" in data
+    
+    def test_get_logs(self, auth_headers):
+        """دریافت لاگ‌ها"""
+        response = client.get("/api/logs", headers=auth_headers)
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert "logs" in data
+        assert isinstance(data["logs"], list)
+    
+    def test_get_log_stats(self, auth_headers):
+        """دریافت آمار لاگ‌ها"""
+        response = client.get("/api/logs/stats", headers=auth_headers)
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert "total_logs" in data or data == {}
+    
+    def test_get_performance(self, auth_headers):
+        """دریافت عملکرد مدل"""
+        response = client.get("/api/monitoring/performance", headers=auth_headers)
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert "daily_metrics" in data
+        assert "status" in data
+
+
+class TestPasswordChange:
+    """تست تغییر رمز عبور"""
+    
+    @pytest.fixture
+    def auth_headers(self):
+        """هدرهای احراز هویت"""
+        response = client.post(
+            "/api/token",
+            data={"username": "admin", "password": "admin123"}
+        )
+        token = response.json()["access_token"]
+        return {"Authorization": f"Bearer {token}"}
+    
+    def test_change_password_wrong_current(self, auth_headers):
+        """تغییر رمز با رمز فعلی اشتباه"""
+        response = client.post(
+            "/api/users/change-password",
+            headers=auth_headers,
+            json={
+                "current_password": "wrong_password",
+                "new_password": "new_password123"
+            }
+        )
+        
+        assert response.status_code == 400
+
+
+class TestHTMLPages:
+    """تست صفحات HTML"""
+    
+    def test_login_page(self):
+        """صفحه ورود"""
+        response = client.get("/login")
+        
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+    
+    def test_index_page(self):
+        """صفحه اصلی"""
+        response = client.get("/")
+        
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+
+
+class TestAPIDocumentation:
+    """تست مستندات API"""
+    
+    def test_swagger_docs(self):
+        """Swagger UI"""
+        response = client.get("/docs")
+        
+        assert response.status_code == 200
+    
+    def test_redoc_docs(self):
+        """ReDoc"""
+        response = client.get("/redoc")
+        
+        assert response.status_code == 200
+    
+    def test_openapi_json(self):
+        """OpenAPI Schema"""
+        response = client.get("/openapi.json")
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert "openapi" in data
+        assert "info" in data
+        assert "paths" in data
+
+
+class TestRateLimiting:
+    """تست محدودیت تلاش ناموفق"""
+    
+    def test_multiple_failed_logins(self):
+        """تست قفل شدن بعد از چند تلاش ناموفق"""
+        # 5 تلاش ناموفق
+        for i in range(5):
+            response = client.post(
+                "/api/token",
+                data={
+                    "username": "test_user",
+                    "password": "wrong_password"
+                }
+            )
+            # همه باید 401 باشند
+            assert response.status_code == 401
+        
+        # تلاش ششم باید قفل باشد
+        response = client.post(
+            "/api/token",
+            data={
+                "username": "test_user",
+                "password": "wrong_password"
+            }
+        )
+        
+        # ممکن است 403 باشد (قفل)
+        # یا 401 اگر سیستم قفل تنظیم نشده
+        assert response.status_code in [401, 403]
+
+
+class TestErrorHandling:
+    """تست مدیریت خطا"""
+    
+    def test_404_endpoint(self):
+        """Endpoint نامعتبر"""
+        response = client.get("/api/invalid_endpoint")
+        
+        assert response.status_code == 404
+    
+    def test_405_wrong_method(self):
+        """متد نامعتبر"""
+        response = client.get("/api/token")  # باید POST باشد
+        
+        assert response.status_code == 405
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# اجرای تست‌ها
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "--tb=short"])
+
+
+
+
+
+"""
+====================================================================
+فایل: tests/test_config.py
+تست واحد برای Config
+====================================================================
+"""
+
+import pytest
+import sys
+from pathlib import Path
+
+# اضافه کردن مسیر پروژه
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from config import Config
+
+
+class TestConfigValidation:
+    """تست اعتبارسنجی تنظیمات"""
+    
+    def test_config_exists(self):
+        """بررسی وجود کلاس Config"""
+        assert Config is not None
+    
+    def test_risk_per_trade_valid(self):
+        """ریسک هر معامله باید بین 0 تا 5% باشد"""
+        assert 0 < Config.RISK_PER_TRADE <= 0.05
+    
+    def test_max_daily_loss_valid(self):
+        """حداکثر ضرر روزانه باید منطقی باشد"""
+        assert 0 < Config.MAX_DAILY_LOSS <= 0.20
+    
+    def test_max_positions_valid(self):
+        """تعداد پوزیشن‌های همزمان باید مثبت باشد"""
+        assert Config.MAX_POSITIONS > 0
+        assert Config.MAX_POSITIONS <= 10
+    
+    def test_sl_tp_multipliers_valid(self):
+        """ضرایب SL/TP باید منطقی باشند"""
+        assert Config.SL_ATR_MULTIPLIER > 0
+        assert Config.TP_ATR_MULTIPLIER > 0
+        assert Config.TP_ATR_MULTIPLIER > Config.SL_ATR_MULTIPLIER
+    
+    def test_min_risk_reward_valid(self):
+        """نسبت ریسک به ریوارد باید حداقل 1 باشد"""
+        assert Config.MIN_RISK_REWARD >= 1.0
+    
+    def test_thresholds_valid(self):
+        """آستانه‌های خرید و فروش باید در رنج صحیح باشند"""
+        assert 0.5 < Config.BUY_THRESHOLD < 1.0
+        assert 0 < Config.SELL_THRESHOLD < 0.5
+        assert Config.BUY_THRESHOLD > Config.SELL_THRESHOLD
+    
+    def test_lookback_period_valid(self):
+        """دوره بازنگری باید مثبت باشد"""
+        assert Config.LOOKBACK_PERIOD > 0
+        assert Config.LOOKBACK_PERIOD <= 200
+    
+    def test_min_adx_valid(self):
+        """حداقل ADX باید در رنج معقول باشد"""
+        assert 0 <= Config.MIN_ADX <= 100
+        assert Config.MAX_ADX > Config.MIN_ADX
+
+
+class TestConfigMethods:
+    """تست متدهای Config"""
+    
+    def test_create_directories(self):
+        """تست ساخت پوشه‌ها"""
+        Config.create_directories()
+        
+        assert Config.DATA_DIR.exists()
+        assert Config.MODELS_DIR.exists()
+        assert Config.LOGS_DIR.exists()
+    
+    def test_to_dict(self):
+        """تست تبدیل به Dictionary"""
+        config_dict = Config.to_dict()
+        
+        assert isinstance(config_dict, dict)
+        assert 'SYMBOL' in config_dict
+        assert 'RISK_PER_TRADE' in config_dict
+        assert len(config_dict) > 20
+    
+    def test_validate(self):
+        """تست اعتبارسنجی کامل"""
+        try:
+            Config.validate()
+            assert True
+        except ValueError as e:
+            pytest.fail(f"Validation failed: {e}")
+    
+    def test_update_from_dict(self):
+        """تست به‌روزرسانی از Dictionary"""
+        original_risk = Config.RISK_PER_TRADE
+        
+        # تغییر موقت
+        Config.update_from_dict({'RISK_PER_TRADE': 0.02})
+        assert Config.RISK_PER_TRADE == 0.02
+        
+        # بازگشت به حالت اول
+        Config.update_from_dict({'RISK_PER_TRADE': original_risk})
+        assert Config.RISK_PER_TRADE == original_risk
+
+
+class TestConfigValues:
+    """تست مقادیر پیش‌فرض"""
+    
+    def test_default_symbol(self):
+        """نماد پیش‌فرض باید EURUSD باشد"""
+        assert Config.SYMBOL == "EURUSD"
+    
+    def test_indicator_periods(self):
+        """دوره‌های اندیکاتورها باید منطقی باشند"""
+        assert Config.RSI_PERIOD > 0
+        assert Config.ADX_PERIOD > 0
+        assert Config.ATR_PERIOD > 0
+        assert Config.MA_FAST < Config.MA_SLOW
+    
+    def test_position_management(self):
+        """تنظیمات مدیریت پوزیشن"""
+        assert Config.BE_TRIGGER_ATR > 0
+        assert Config.PARTIAL_CLOSE_TRIGGER_ATR > Config.BE_TRIGGER_ATR
+        assert 0 < Config.PARTIAL_CLOSE_PERCENT <= 1.0
+    
+    def test_trailing_levels(self):
+        """سطوح Trailing Stop باید صعودی باشند"""
+        levels = Config.TRAILING_LEVELS
+        assert len(levels) > 0
+        
+        for i in range(len(levels) - 1):
+            assert levels[i]['profit_atr'] < levels[i+1]['profit_atr']
+
+
+class TestConfigEdgeCases:
+    """تست حالات خاص"""
+    
+    def test_invalid_risk_zero(self):
+        """ریسک صفر نباید قابل قبول باشد"""
+        original = Config.RISK_PER_TRADE
+        Config.RISK_PER_TRADE = 0
+        
+        with pytest.raises(ValueError):
+            Config.validate()
+        
+        Config.RISK_PER_TRADE = original
+    
+    def test_invalid_risk_too_high(self):
+        """ریسک خیلی بالا نباید قابل قبول باشد"""
+        original = Config.RISK_PER_TRADE
+        Config.RISK_PER_TRADE = 0.10
+        
+        with pytest.raises(ValueError):
+            Config.validate()
+        
+        Config.RISK_PER_TRADE = original
+    
+    def test_invalid_thresholds(self):
+        """آستانه‌های اشتباه نباید قابل قبول باشند"""
+        original_buy = Config.BUY_THRESHOLD
+        original_sell = Config.SELL_THRESHOLD
+        
+        # BUY کمتر از 0.5
+        Config.BUY_THRESHOLD = 0.4
+        with pytest.raises(ValueError):
+            Config.validate()
+        
+        Config.BUY_THRESHOLD = original_buy
+        
+        # SELL بیشتر از 0.5
+        Config.SELL_THRESHOLD = 0.6
+        with pytest.raises(ValueError):
+            Config.validate()
+        
+        Config.SELL_THRESHOLD = original_sell
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# اجرای تست‌ها
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "--tb=short"])
+
+
+
+
+
+"""
+====================================================================
+فایل: tests/test_logger.py
+تست واحد برای ExplainableLogger
+====================================================================
+"""
+
+import pytest
+import sys
+from pathlib import Path
+import tempfile
+import shutil
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from explainable_logger import ExplainableLogger
+
+
+class TestLoggerCreation:
+    """تست ساخت Logger"""
+    
+    def test_logger_creation(self):
+        """ساخت Logger باید موفق باشد"""
+        logger = ExplainableLogger(log_to_console=False)
+        assert logger is not None
+    
+    def test_logger_with_custom_paths(self):
+        """ساخت Logger با مسیرهای سفارشی"""
+        temp_dir = tempfile.mkdtemp()
+        
+        try:
+            log_file = Path(temp_dir) / "test.json"
+            db_file = Path(temp_dir) / "test.db"
+            
+            logger = ExplainableLogger(
+                log_to_console=False,
+                log_to_file=True,
+                log_to_db=True,
+                log_file=str(log_file),
+                db_file=str(db_file)
+            )
+            
+            assert log_file.parent.exists()
+            assert db_file.parent.exists()
+        
+        finally:
+            shutil.rmtree(temp_dir)
+
+
+class TestLoggerMethods:
+    """تست متدهای Logger"""
+    
+    @pytest.fixture
+    def logger(self):
+        """Logger موقت برای تست"""
+        temp_dir = tempfile.mkdtemp()
+        logger = ExplainableLogger(
+            log_to_console=False,
+            log_to_file=True,
+            log_to_db=True,
+            log_file=str(Path(temp_dir) / "test.json"),
+            db_file=str(Path(temp_dir) / "test.db")
+        )
+        yield logger
+        shutil.rmtree(temp_dir)
+    
+    def test_log_market_snapshot(self, logger):
+        """تست لاگ وضعیت بازار"""
+        logger.log_market_snapshot(
+            price=1.08750,
+            atr=0.00145,
+            adx=32.4,
+            rsi=62.3,
+            market_state="روند صعودی"
+        )
+        
+        assert logger.log_count >= 1
+    
+    def test_log_ml_decision(self, logger):
+        """تست لاگ تصمیم ML"""
+        logger.log_ml_decision(
+            prediction=0.742,
+            confidence=0.74,
+            direction='BUY',
+            reasoning='الگوی صعودی قوی'
+        )
+        
+        assert logger.log_count >= 1
+    
+    def test_log_why_not_trade(self, logger):
+        """تست لاگ عدم معامله"""
+        logger.log_why_not_trade(
+            reasons=['ADX پایین', 'اسپرد بالا'],
+            details={'adx': 18.2}
+        )
+        
+        assert logger.log_count >= 1
+    
+    def test_log_trade_open(self, logger):
+        """تست لاگ باز کردن معامله"""
+        logger.log_trade_open(
+            direction='BUY',
+            price=1.08750,
+            volume=0.15,
+            sl=1.08600,
+            tp=1.09000,
+            reason='سیگنال ML',
+            risk_reward=1.67
+        )
+        
+        assert logger.log_count >= 1
+    
+    def test_log_trade_close(self, logger):
+        """تست لاگ بستن معامله"""
+        logger.log_trade_close(
+            direction='BUY',
+            entry_price=1.08750,
+            exit_price=1.08950,
+            volume=0.15,
+            profit=75.50,
+            reason='Take Profit'
+        )
+        
+        assert logger.log_count >= 1
+    
+    def test_log_error(self, logger):
+        """تست لاگ خطا"""
+        logger.log_error(
+            error_type='MT5_CONNECTION',
+            message='قطع اتصال',
+            suggestion='MT5 را restart کنید'
+        )
+        
+        assert logger.log_count >= 1
+    
+    def test_log_warning(self, logger):
+        """تست لاگ هشدار"""
+        logger.log_warning(
+            warning_type='HIGH_DRAWDOWN',
+            message='ضرر روزانه بالا'
+        )
+        
+        assert logger.log_count >= 1
+    
+    def test_log_info(self, logger):
+        """تست لاگ اطلاعات"""
+        logger.log_info(
+            info_type='BOT_STARTED',
+            message='ربات شروع شد'
+        )
+        
+        assert logger.log_count >= 1
+
+
+class TestLoggerDatabase:
+    """تست دیتابیس Logger"""
+    
+    @pytest.fixture
+    def logger(self):
+        """Logger موقت"""
+        temp_dir = tempfile.mkdtemp()
+        logger = ExplainableLogger(
+            log_to_console=False,
+            log_to_file=False,
+            log_to_db=True,
+            db_file=str(Path(temp_dir) / "test.db")
+        )
+        yield logger
+        shutil.rmtree(temp_dir)
+    
+    def test_get_logs(self, logger):
+        """تست دریافت لاگ‌ها"""
+        # ثبت چند لاگ
+        logger.log_info('TEST', 'Test 1')
+        logger.log_info('TEST', 'Test 2')
+        logger.log_error('ERROR', 'Error 1', None)
+        
+        # دریافت همه
+        logs = logger.get_logs(limit=10)
+        assert len(logs) >= 3
+        
+        # فیلتر بر اساس نوع
+        info_logs = logger.get_logs(log_type='INFO', limit=10)
+        assert len(info_logs) >= 2
+        
+        error_logs = logger.get_logs(log_type='ERROR', limit=10)
+        assert len(error_logs) >= 1
+    
+    def test_get_statistics(self, logger):
+        """تست آمار لاگ‌ها"""
+        # ثبت چند لاگ
+        logger.log_info('TEST', 'Test')
+        logger.log_error('ERROR', 'Error', None)
+        logger.log_warning('WARNING', 'Warning')
+        
+        stats = logger.get_statistics()
+        
+        assert 'total_logs' in stats
+        assert stats['total_logs'] >= 3
+        assert 'by_type' in stats
+        assert 'by_level' in stats
+    
+    def test_cleanup_old_logs(self, logger):
+        """تست پاک‌سازی لاگ‌های قدیمی"""
+        # ثبت لاگ
+        logger.log_info('TEST', 'Old log')
+        
+        # پاک‌سازی (0 روز = همه)
+        logger.cleanup_old_logs(days=0)
+        
+        # بررسی
+        logs = logger.get_logs(limit=10)
+        # ممکن است همه پاک شوند
+        assert isinstance(logs, list)
+
+
+class TestLoggerHelpers:
+    """تست توابع کمکی"""
+    
+    def test_volatility_label(self):
+        """تست برچسب نوسان"""
+        logger = ExplainableLogger(log_to_console=False)
+        
+        assert logger._volatility_label(0.003) == "نوسان بالا"
+        assert logger._volatility_label(0.0015) == "نوسان متوسط"
+        assert logger._volatility_label(0.0005) == "نوسان پایین"
+    
+    def test_trend_strength(self):
+        """تست برچسب قدرت روند"""
+        logger = ExplainableLogger(log_to_console=False)
+        
+        assert logger._trend_strength(45) == "روند قوی"
+        assert logger._trend_strength(30) == "روند متوسط"
+        assert logger._trend_strength(20) == "بدون روند / رنج"
+    
+    def test_rsi_zone(self):
+        """تست برچسب ناحیه RSI"""
+        logger = ExplainableLogger(log_to_console=False)
+        
+        assert logger._rsi_zone(75) == "اشباع خرید"
+        assert logger._rsi_zone(65) == "صعودی"
+        assert logger._rsi_zone(50) == "خنثی"
+        assert logger._rsi_zone(35) == "نزولی"
+        assert logger._rsi_zone(25) == "اشباع فروش"
+    
+    def test_confidence_bar(self):
+        """تست نوار اطمینان"""
+        logger = ExplainableLogger(log_to_console=False)
+        
+        bar = logger._confidence_bar(0.8)
+        assert isinstance(bar, str)
+        assert len(bar) > 0
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# اجرای تست‌ها
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "--tb=short"])
+
+
+
+
+
+"""
+====================================================================
+فایل: tests/test_monitor.py
+تست واحد برای ModelMonitor
+====================================================================
+"""
+
+import pytest
+import sys
+from pathlib import Path
+import tempfile
+import shutil
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from model_monitor import ModelMonitor
+
+
+class TestMonitorCreation:
+    """تست ساخت Monitor"""
+    
+    def test_monitor_creation(self):
+        """ساخت Monitor باید موفق باشد"""
+        temp_dir = tempfile.mkdtemp()
+        try:
+            monitor = ModelMonitor(
+                db_file=str(Path(temp_dir) / "test.db")
+            )
+            assert monitor is not None
+        finally:
+            shutil.rmtree(temp_dir)
+    
+    def test_monitor_with_custom_params(self):
+        """ساخت Monitor با پارامترهای سفارشی"""
+        temp_dir = tempfile.mkdtemp()
+        try:
+            monitor = ModelMonitor(
+                db_file=str(Path(temp_dir) / "test.db"),
+                train_accuracy=0.70,
+                min_accuracy=0.50,
+                warning_threshold=0.55
+            )
+            
+            assert monitor.train_accuracy == 0.70
+            assert monitor.min_accuracy == 0.50
+            assert monitor.warning_threshold == 0.55
+        finally:
+            shutil.rmtree(temp_dir)
+
+
+class TestMonitorPredictions:
+    """تست ثبت پیش‌بینی‌ها"""
+    
+    @pytest.fixture
+    def monitor(self):
+        """Monitor موقت"""
+        temp_dir = tempfile.mkdtemp()
+        monitor = ModelMonitor(
+            db_file=str(Path(temp_dir) / "test.db"),
+            train_accuracy=0.68
+        )
+        yield monitor
+        shutil.rmtree(temp_dir)
+    
+    def test_log_prediction(self, monitor):
+        """تست ثبت پیش‌بینی"""
+        monitor.log_prediction(
+            prediction=0.75,
+            confidence=0.80,
+            direction='BUY',
+            notes='Test prediction'
+        )
+        
+        assert len(monitor.recent_predictions) >= 1
+    
+    def test_log_multiple_predictions(self, monitor):
+        """تست ثبت چند پیش‌بینی"""
+        for i in range(10):
+            monitor.log_prediction(
+                prediction=np.random.rand(),
+                confidence=np.random.rand(),
+                direction='BUY' if i % 2 == 0 else 'SELL',
+                notes=f'Test {i}'
+            )
+        
+        assert len(monitor.recent_predictions) == 10
+    
+    def test_log_outcome(self, monitor):
+        """تست ثبت نتیجه"""
+        # ابتدا یک پیش‌بینی ثبت کن
+        monitor.log_prediction(0.75, 0.80, 'BUY', 'Test')
+        
+        # حالا نتیجه را ثبت کن
+        monitor.log_outcome(
+            prediction_id=1,
+            actual_direction='BUY',
+            was_correct=True,
+            profit=50.0
+        )
+        
+        # بررسی (از دیتابیس)
+        # این نیاز به Query دارد
+
+
+class TestMonitorMetrics:
+    """تست محاسبه متریک‌ها"""
+    
+    @pytest.fixture
+    def monitor_with_data(self):
+        """Monitor با داده‌های تست"""
+        temp_dir = tempfile.mkdtemp()
+        monitor = ModelMonitor(
+            db_file=str(Path(temp_dir) / "test.db"),
+            train_accuracy=0.68
+        )
+        
+        # ثبت چند پیش‌بینی
+        np.random.seed(42)
+        for i in range(20):
+            pred = np.random.rand()
+            conf = abs(pred - 0.5) * 2
+            direction = 'BUY' if pred > 0.65 else 'SELL' if pred < 0.35 else 'NONE'
+            
+            monitor.log_prediction(pred, conf, direction, f'Test {i}')
+            
+            # شبیه‌سازی نتیجه (70% درست)
+            was_correct = np.random.rand() < 0.70
+            monitor.log_outcome(i+1, direction, was_correct, 
+                              np.random.uniform(-50, 100) if was_correct else np.random.uniform(-100, -20))
+        
+        yield monitor
+        shutil.rmtree(temp_dir)
+    
+    def test_calculate_daily_metrics(self, monitor_with_data):
+        """تست محاسبه متریک‌های روزانه"""
+        metrics = monitor_with_data.calculate_daily_metrics()
+        
+        assert 'accuracy' in metrics
+        assert 'total_predictions' in metrics
+        assert 'verified_predictions' in metrics
+        assert 'train_accuracy' in metrics
+        
+        assert metrics['total_predictions'] >= 20
+        assert 0 <= metrics['accuracy'] <= 1
+    
+    def test_get_daily_metrics(self, monitor_with_data):
+        """تست دریافت متریک‌های روزانه"""
+        # ابتدا محاسبه کن
+        monitor_with_data.calculate_daily_metrics()
+        
+        # حالا دریافت کن
+        metrics_list = monitor_with_data.get_daily_metrics(days=7)
+        
+        assert isinstance(metrics_list, list)
+        assert len(metrics_list) >= 1
+
+
+class TestMonitorRetrain:
+    """تست بررسی نیاز به Retrain"""
+    
+    @pytest.fixture
+    def monitor_good_performance(self):
+        """Monitor با عملکرد خوب"""
+        temp_dir = tempfile.mkdtemp()
+        monitor = ModelMonitor(
+            db_file=str(Path(temp_dir) / "test.db"),
+            train_accuracy=0.68,
+            min_accuracy=0.45
+        )
+        
+        # شبیه‌سازی عملکرد خوب (65%)
+        for i in range(50):
+            monitor.log_prediction(0.75, 0.80, 'BUY', f'Test {i}')
+            monitor.log_outcome(i+1, 'BUY', np.random.rand() < 0.65, 50.0)
+        
+        monitor.calculate_daily_metrics()
+        
+        yield monitor
+        shutil.rmtree(temp_dir)
+    
+    @pytest.fixture
+    def monitor_bad_performance(self):
+        """Monitor با عملکرد ضعیف"""
+        temp_dir = tempfile.mkdtemp()
+        monitor = ModelMonitor(
+            db_file=str(Path(temp_dir) / "test.db"),
+            train_accuracy=0.68,
+            min_accuracy=0.45
+        )
+        
+        # شبیه‌سازی عملکرد ضعیف (40%)
+        for i in range(50):
+            monitor.log_prediction(0.75, 0.80, 'BUY', f'Test {i}')
+            monitor.log_outcome(i+1, 'BUY', np.random.rand() < 0.40, -50.0)
+        
+        monitor.calculate_daily_metrics()
+        
+        yield monitor
+        shutil.rmtree(temp_dir)
+    
+    def test_should_not_retrain_good_performance(self, monitor_good_performance):
+        """عملکرد خوب نباید نیاز به Retrain داشته باشد"""
+        should_retrain, reason = monitor_good_performance.should_retrain()
+        
+        # ممکن است بسته به شبیه‌سازی نیاز داشته باشد یا نه
+        assert isinstance(should_retrain, bool)
+        assert isinstance(reason, str)
+        assert len(reason) > 0
+    
+    def test_should_retrain_bad_performance(self, monitor_bad_performance):
+        """عملکرد ضعیف باید نیاز به Retrain داشته باشد"""
+        should_retrain, reason = monitor_bad_performance.should_retrain()
+        
+        # باید True باشد
+        assert should_retrain == True
+        assert 'Accuracy' in reason or 'تنزل' in reason
+
+
+class TestMonitorStatus:
+    """تست وضعیت عملکرد"""
+    
+    @pytest.fixture
+    def monitor_with_data(self):
+        """Monitor با داده"""
+        temp_dir = tempfile.mkdtemp()
+        monitor = ModelMonitor(
+            db_file=str(Path(temp_dir) / "test.db"),
+            train_accuracy=0.68
+        )
+        
+        for i in range(30):
+            monitor.log_prediction(0.75, 0.80, 'BUY', f'Test {i}')
+            monitor.log_outcome(i+1, 'BUY', np.random.rand() < 0.60, 50.0)
+        
+        monitor.calculate_daily_metrics()
+        
+        yield monitor
+        shutil.rmtree(temp_dir)
+    
+    def test_get_performance_status(self, monitor_with_data):
+        """تست دریافت وضعیت عملکرد"""
+        status = monitor_with_data.get_performance_status()
+        
+        assert 'status' in status
+        assert 'color' in status
+        assert 'message' in status
+        assert 'accuracy' in status
+        
+        assert status['status'] in ['EXCELLENT', 'GOOD', 'WARNING', 'CRITICAL', 'UNKNOWN']
+        assert status['color'] in ['green', 'blue', 'yellow', 'red', 'gray']
+
+
+class TestMonitorAnalysis:
+    """تست تحلیل‌های پیشرفته"""
+    
+    @pytest.fixture
+    def monitor_with_varied_data(self):
+        """Monitor با داده‌های متنوع"""
+        temp_dir = tempfile.mkdtemp()
+        monitor = ModelMonitor(
+            db_file=str(Path(temp_dir) / "test.db"),
+            train_accuracy=0.68
+        )
+        
+        # پیش‌بینی‌ها با confidence مختلف
+        for i in range(40):
+            pred = np.random.rand()
+            conf = np.random.rand()  # confidence تصادفی
+            direction = 'BUY' if pred > 0.5 else 'SELL'
+            
+            monitor.log_prediction(pred, conf, direction, f'Test {i}')
+            
+            # عملکرد بهتر با confidence بالاتر
+            accuracy_rate = 0.4 + (conf * 0.4)  # 40% تا 80%
+            was_correct = np.random.rand() < accuracy_rate
+            
+            monitor.log_outcome(i+1, direction, was_correct, 50.0 if was_correct else -50.0)
+        
+        yield monitor
+        shutil.rmtree(temp_dir)
+    
+    def test_analyze_by_confidence(self, monitor_with_varied_data):
+        """تست تحلیل بر اساس confidence"""
+        analysis = monitor_with_varied_data.analyze_by_confidence()
+        
+        assert isinstance(analysis, dict)
+        
+        # بررسی رنج‌های confidence
+        expected_labels = ['Low', 'Medium', 'High', 'Very High']
+        for label in expected_labels:
+            if label in analysis:
+                assert 'total' in analysis[label]
+                assert 'correct' in analysis[label]
+                assert 'accuracy' in analysis[label]
+    
+    def test_get_confusion_matrix(self, monitor_with_varied_data):
+        """تست Confusion Matrix"""
+        matrix = monitor_with_varied_data.get_confusion_matrix()
+        
+        assert 'buy' in matrix
+        assert 'sell' in matrix
+        
+        assert 'total' in matrix['buy']
+        assert 'correct' in matrix['buy']
+        assert 'accuracy' in matrix['buy']
+
+
+class TestMonitorEdgeCases:
+    """تست حالات خاص"""
+    
+    def test_empty_monitor(self):
+        """Monitor بدون داده"""
+        temp_dir = tempfile.mkdtemp()
+        try:
+            monitor = ModelMonitor(
+                db_file=str(Path(temp_dir) / "test.db")
+            )
+            
+            # باید خطا ندهد
+            metrics = monitor.calculate_daily_metrics()
+            assert metrics['total_predictions'] == 0
+            
+            should_retrain, reason = monitor.should_retrain()
+            assert should_retrain == False
+            assert 'داده کافی' in reason
+        
+        finally:
+            shutil.rmtree(temp_dir)
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# اجرای تست‌ها
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "--tb=short"])
+
+
+

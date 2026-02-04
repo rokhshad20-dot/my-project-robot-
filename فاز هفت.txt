@@ -1,0 +1,1679 @@
+"""
+====================================================================
+فایل: model_monitor.py
+نظارت بر عملکرد مدل Machine Learning در زمان واقعی
+====================================================================
+این ماژول عملکرد مدل را رصد کرده و در صورت افت کیفیت هشدار می‌دهد
+====================================================================
+"""
+
+import json
+import sqlite3
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+from collections import defaultdict
+import numpy as np
+
+
+class ModelMonitor:
+    """
+    نظارت بر عملکرد مدل ML
+    
+    ویژگی‌ها:
+    - ثبت هر پیش‌بینی
+    - محاسبه Accuracy واقعی
+    - مقایسه با Train Accuracy
+    - هشدار Retrain
+    - تحلیل روند عملکرد
+    """
+    
+    def __init__(
+        self,
+        db_file: str = "data/logs/model_monitor.db",
+        train_accuracy: float = 0.68,
+        min_accuracy: float = 0.45,
+        warning_threshold: float = 0.50,
+        max_degradation: float = 0.15
+    ):
+        """
+        مقداردهی اولیه
+        
+        Args:
+            db_file: مسیر دیتابیس
+            train_accuracy: Accuracy آموزش
+            min_accuracy: حداقل Accuracy قابل قبول
+            warning_threshold: آستانه هشدار
+            max_degradation: حداکثر تنزل نسبت به Train
+        """
+        self.db_file = Path(db_file)
+        self.db_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        self.train_accuracy = train_accuracy
+        self.min_accuracy = min_accuracy
+        self.warning_threshold = warning_threshold
+        self.max_degradation = max_degradation
+        
+        # راه‌اندازی دیتابیس
+        self._init_database()
+        
+        # کش موقت
+        self.recent_predictions = []
+        
+        print(f"✅ Model Monitor راه‌اندازی شد")
+        print(f"   Train Accuracy: {train_accuracy*100:.1f}%")
+        print(f"   حداقل قابل قبول: {min_accuracy*100:.1f}%")
+        print(f"   آستانه هشدار: {warning_threshold*100:.1f}%")
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # ثبت پیش‌بینی‌ها
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def log_prediction(
+        self,
+        prediction: float,
+        confidence: float,
+        direction: str,
+        notes: Optional[str] = None
+    ):
+        """
+        ثبت یک پیش‌بینی
+        
+        Args:
+            prediction: پیش‌بینی خام (0-1)
+            confidence: اطمینان
+            direction: جهت (BUY/SELL/NONE)
+            notes: یادداشت
+        """
+        try:
+            conn = sqlite3.connect(str(self.db_file))
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                INSERT INTO predictions 
+                (timestamp, prediction, confidence, direction, notes)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                datetime.now().isoformat(),
+                float(prediction),
+                float(confidence),
+                direction,
+                notes or ""
+            ))
+            
+            conn.commit()
+            conn.close()
+            
+            # اضافه به کش
+            self.recent_predictions.append({
+                'prediction': prediction,
+                'confidence': confidence,
+                'direction': direction
+            })
+            
+            # نگه‌داری فقط 100 تای آخر
+            if len(self.recent_predictions) > 100:
+                self.recent_predictions.pop(0)
+        
+        except Exception as e:
+            print(f"⚠️  خطا در ثبت پیش‌بینی: {e}")
+    
+    def log_outcome(
+        self,
+        prediction_id: int,
+        actual_direction: str,
+        was_correct: bool,
+        profit: Optional[float] = None
+    ):
+        """
+        ثبت نتیجه واقعی یک پیش‌بینی
+        
+        Args:
+            prediction_id: شناسه پیش‌بینی
+            actual_direction: جهت واقعی
+            was_correct: آیا درست بود؟
+            profit: سود/ضرر
+        """
+        try:
+            conn = sqlite3.connect(str(self.db_file))
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                UPDATE predictions
+                SET actual_direction = ?,
+                    was_correct = ?,
+                    profit = ?,
+                    verified_at = ?
+                WHERE id = ?
+            """, (
+                actual_direction,
+                1 if was_correct else 0,
+                profit,
+                datetime.now().isoformat(),
+                prediction_id
+            ))
+            
+            conn.commit()
+            conn.close()
+        
+        except Exception as e:
+            print(f"⚠️  خطا در ثبت نتیجه: {e}")
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # محاسبه متریک‌ها
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def calculate_daily_metrics(self) -> Dict:
+        """
+        محاسبه متریک‌های روزانه
+        
+        Returns:
+            دیکشنری شامل Accuracy، تعداد، و ...
+        """
+        try:
+            conn = sqlite3.connect(str(self.db_file))
+            cursor = conn.cursor()
+            
+            # آخرین 24 ساعت
+            yesterday = (datetime.now() - timedelta(days=1)).isoformat()
+            
+            # تعداد کل پیش‌بینی‌ها
+            cursor.execute("""
+                SELECT COUNT(*) 
+                FROM predictions 
+                WHERE timestamp > ?
+            """, (yesterday,))
+            total = cursor.fetchone()[0]
+            
+            # تعداد تأیید شده‌ها
+            cursor.execute("""
+                SELECT COUNT(*) 
+                FROM predictions 
+                WHERE timestamp > ? 
+                AND was_correct IS NOT NULL
+            """, (yesterday,))
+            verified = cursor.fetchone()[0]
+            
+            # تعداد درست‌ها
+            cursor.execute("""
+                SELECT COUNT(*) 
+                FROM predictions 
+                WHERE timestamp > ? 
+                AND was_correct = 1
+            """, (yesterday,))
+            correct = cursor.fetchone()[0]
+            
+            # محاسبه Accuracy
+            accuracy = correct / verified if verified > 0 else 0
+            
+            # میانگین اطمینان
+            cursor.execute("""
+                SELECT AVG(confidence) 
+                FROM predictions 
+                WHERE timestamp > ?
+            """, (yesterday,))
+            avg_confidence = cursor.fetchone()[0] or 0
+            
+            # تعداد به تفکیک جهت
+            cursor.execute("""
+                SELECT direction, COUNT(*) 
+                FROM predictions 
+                WHERE timestamp > ?
+                GROUP BY direction
+            """, (yesterday,))
+            by_direction = dict(cursor.fetchall())
+            
+            conn.close()
+            
+            metrics = {
+                'date': datetime.now().date().isoformat(),
+                'total_predictions': total,
+                'verified_predictions': verified,
+                'correct_predictions': correct,
+                'accuracy': accuracy,
+                'avg_confidence': avg_confidence,
+                'by_direction': by_direction,
+                'train_accuracy': self.train_accuracy,
+                'degradation': self.train_accuracy - accuracy
+            }
+            
+            # ذخیره متریک‌های روزانه
+            self._save_daily_metrics(metrics)
+            
+            return metrics
+        
+        except Exception as e:
+            print(f"⚠️  خطا در محاسبه متریک‌ها: {e}")
+            return {}
+    
+    def get_daily_metrics(self, days: int = 7) -> List[Dict]:
+        """
+        دریافت متریک‌های چند روز گذشته
+        
+        Args:
+            days: تعداد روز
+        
+        Returns:
+            لیست متریک‌ها
+        """
+        try:
+            conn = sqlite3.connect(str(self.db_file))
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT * FROM daily_metrics
+                ORDER BY date DESC
+                LIMIT ?
+            """, (days,))
+            
+            columns = [desc[0] for desc in cursor.description]
+            metrics_list = []
+            
+            for row in cursor.fetchall():
+                metrics = dict(zip(columns, row))
+                # تبدیل JSON
+                if metrics.get('by_direction'):
+                    metrics['by_direction'] = json.loads(metrics['by_direction'])
+                metrics_list.append(metrics)
+            
+            conn.close()
+            return metrics_list
+        
+        except Exception as e:
+            print(f"⚠️  خطا در دریافت متریک‌ها: {e}")
+            return []
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # بررسی نیاز به Retrain
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def should_retrain(self) -> Tuple[bool, str]:
+        """
+        بررسی نیاز به آموزش مجدد
+        
+        Returns:
+            (نیاز دارد؟, دلیل)
+        """
+        # دریافت متریک‌های 7 روز گذشته
+        recent_metrics = self.get_daily_metrics(days=7)
+        
+        if not recent_metrics:
+            return False, "داده کافی برای تصمیم‌گیری نیست"
+        
+        # محاسبه میانگین Accuracy
+        accuracies = [m['accuracy'] for m in recent_metrics if m['accuracy'] > 0]
+        
+        if not accuracies:
+            return False, "هنوز نتیجه‌ای تأیید نشده"
+        
+        avg_accuracy = np.mean(accuracies)
+        trend = self._calculate_trend(accuracies)
+        
+        # بررسی شرایط
+        reasons = []
+        
+        # شرط 1: Accuracy کمتر از حداقل
+        if avg_accuracy < self.min_accuracy:
+            reasons.append(f"Accuracy ({avg_accuracy*100:.1f}%) کمتر از حداقل ({self.min_accuracy*100:.1f}%)")
+        
+        # شرط 2: تنزل شدید
+        degradation = self.train_accuracy - avg_accuracy
+        if degradation > self.max_degradation:
+            reasons.append(f"تنزل {degradation*100:.1f}% نسبت به Train Accuracy")
+        
+        # شرط 3: روند نزولی
+        if trend < -0.05:
+            reasons.append(f"روند نزولی عملکرد ({trend*100:.1f}%)")
+        
+        # شرط 4: نوسان بالا
+        if len(accuracies) >= 5:
+            std = np.std(accuracies)
+            if std > 0.15:
+                reasons.append(f"نوسان بالای عملکرد (std={std:.2f})")
+        
+        if reasons:
+            return True, " | ".join(reasons)
+        else:
+            return False, f"عملکرد مناسب است (Accuracy: {avg_accuracy*100:.1f}%)"
+    
+    def get_performance_status(self) -> Dict:
+        """
+        دریافت وضعیت کلی عملکرد
+        
+        Returns:
+            دیکشنری شامل وضعیت، رنگ، و توضیح
+        """
+        recent_metrics = self.get_daily_metrics(days=7)
+        
+        if not recent_metrics:
+            return {
+                'status': 'UNKNOWN',
+                'color': 'gray',
+                'message': 'داده کافی نیست',
+                'accuracy': 0
+            }
+        
+        accuracies = [m['accuracy'] for m in recent_metrics if m['accuracy'] > 0]
+        
+        if not accuracies:
+            return {
+                'status': 'UNKNOWN',
+                'color': 'gray',
+                'message': 'در انتظار نتایج',
+                'accuracy': 0
+            }
+        
+        avg_accuracy = np.mean(accuracies)
+        
+        # تعیین وضعیت
+        if avg_accuracy >= self.train_accuracy * 0.9:
+            status = 'EXCELLENT'
+            color = 'green'
+            message = 'عملکرد عالی'
+        elif avg_accuracy >= self.warning_threshold:
+            status = 'GOOD'
+            color = 'blue'
+            message = 'عملکرد خوب'
+        elif avg_accuracy >= self.min_accuracy:
+            status = 'WARNING'
+            color = 'yellow'
+            message = 'عملکرد نیاز به بررسی دارد'
+        else:
+            status = 'CRITICAL'
+            color = 'red'
+            message = 'عملکرد بحرانی - نیاز به Retrain'
+        
+        return {
+            'status': status,
+            'color': color,
+            'message': message,
+            'accuracy': avg_accuracy,
+            'train_accuracy': self.train_accuracy,
+            'degradation': self.train_accuracy - avg_accuracy
+        }
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # تحلیل پیشرفته
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def analyze_by_confidence(self) -> Dict:
+        """
+        تحلیل عملکرد بر اساس سطح اطمینان
+        
+        Returns:
+            دیکشنری شامل Accuracy برای رنج‌های مختلف confidence
+        """
+        try:
+            conn = sqlite3.connect(str(self.db_file))
+            cursor = conn.cursor()
+            
+            # 7 روز گذشته
+            week_ago = (datetime.now() - timedelta(days=7)).isoformat()
+            
+            results = {}
+            
+            # رنج‌های confidence
+            ranges = [
+                ('Low', 0.0, 0.5),
+                ('Medium', 0.5, 0.7),
+                ('High', 0.7, 0.85),
+                ('Very High', 0.85, 1.0)
+            ]
+            
+            for label, min_conf, max_conf in ranges:
+                cursor.execute("""
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN was_correct = 1 THEN 1 ELSE 0 END) as correct
+                    FROM predictions
+                    WHERE timestamp > ?
+                    AND confidence >= ?
+                    AND confidence < ?
+                    AND was_correct IS NOT NULL
+                """, (week_ago, min_conf, max_conf))
+                
+                row = cursor.fetchone()
+                total, correct = row[0], row[1] or 0
+                
+                results[label] = {
+                    'total': total,
+                    'correct': correct,
+                    'accuracy': correct / total if total > 0 else 0,
+                    'range': f"{min_conf:.0%}-{max_conf:.0%}"
+                }
+            
+            conn.close()
+            return results
+        
+        except Exception as e:
+            print(f"⚠️  خطا در تحلیل confidence: {e}")
+            return {}
+    
+    def get_confusion_matrix(self) -> Dict:
+        """
+        محاسبه Confusion Matrix
+        
+        Returns:
+            True Positive, False Positive, True Negative, False Negative
+        """
+        try:
+            conn = sqlite3.connect(str(self.db_file))
+            cursor = conn.cursor()
+            
+            week_ago = (datetime.now() - timedelta(days=7)).isoformat()
+            
+            # BUY predictions
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN was_correct = 1 THEN 1 ELSE 0 END) as correct
+                FROM predictions
+                WHERE timestamp > ?
+                AND direction = 'BUY'
+                AND was_correct IS NOT NULL
+            """, (week_ago,))
+            
+            buy_total, buy_correct = cursor.fetchone()
+            
+            # SELL predictions
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN was_correct = 1 THEN 1 ELSE 0 END) as correct
+                FROM predictions
+                WHERE timestamp > ?
+                AND direction = 'SELL'
+                AND was_correct IS NOT NULL
+            """, (week_ago,))
+            
+            sell_total, sell_correct = cursor.fetchone()
+            
+            conn.close()
+            
+            return {
+                'buy': {
+                    'total': buy_total or 0,
+                    'correct': buy_correct or 0,
+                    'accuracy': (buy_correct or 0) / buy_total if buy_total else 0
+                },
+                'sell': {
+                    'total': sell_total or 0,
+                    'correct': sell_correct or 0,
+                    'accuracy': (sell_correct or 0) / sell_total if sell_total else 0
+                }
+            }
+        
+        except Exception as e:
+            print(f"⚠️  خطا در محاسبه confusion matrix: {e}")
+            return {}
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # توابع داخلی
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def _init_database(self):
+        """راه‌اندازی دیتابیس"""
+        try:
+            conn = sqlite3.connect(str(self.db_file))
+            cursor = conn.cursor()
+            
+            # جدول پیش‌بینی‌ها
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS predictions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    prediction REAL NOT NULL,
+                    confidence REAL NOT NULL,
+                    direction TEXT NOT NULL,
+                    notes TEXT,
+                    actual_direction TEXT,
+                    was_correct INTEGER,
+                    profit REAL,
+                    verified_at TEXT
+                )
+            """)
+            
+            # جدول متریک‌های روزانه
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS daily_metrics (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    date TEXT UNIQUE NOT NULL,
+                    total_predictions INTEGER,
+                    verified_predictions INTEGER,
+                    correct_predictions INTEGER,
+                    accuracy REAL,
+                    avg_confidence REAL,
+                    by_direction TEXT,
+                    train_accuracy REAL,
+                    degradation REAL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # ایندکس‌ها
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_pred_timestamp 
+                ON predictions(timestamp)
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_pred_direction 
+                ON predictions(direction)
+            """)
+            
+            cursor.execute("""
+                CREATE INDEX IF NOT EXISTS idx_daily_date 
+                ON daily_metrics(date)
+            """)
+            
+            conn.commit()
+            conn.close()
+        
+        except Exception as e:
+            print(f"⚠️  خطا در راه‌اندازی دیتابیس: {e}")
+    
+    def _save_daily_metrics(self, metrics: Dict):
+        """ذخیره متریک‌های روزانه"""
+        try:
+            conn = sqlite3.connect(str(self.db_file))
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                INSERT OR REPLACE INTO daily_metrics
+                (date, total_predictions, verified_predictions, correct_predictions,
+                 accuracy, avg_confidence, by_direction, train_accuracy, degradation)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                metrics['date'],
+                metrics['total_predictions'],
+                metrics['verified_predictions'],
+                metrics['correct_predictions'],
+                metrics['accuracy'],
+                metrics['avg_confidence'],
+                json.dumps(metrics['by_direction']),
+                metrics['train_accuracy'],
+                metrics['degradation']
+            ))
+            
+            conn.commit()
+            conn.close()
+        
+        except Exception as e:
+            print(f"⚠️  خطا در ذخیره متریک‌ها: {e}")
+    
+    def _calculate_trend(self, values: List[float]) -> float:
+        """
+        محاسبه روند (شیب خط رگرسیون)
+        
+        Args:
+            values: لیست مقادیر
+        
+        Returns:
+            شیب (مثبت = صعودی، منفی = نزولی)
+        """
+        if len(values) < 2:
+            return 0
+        
+        x = np.arange(len(values))
+        y = np.array(values)
+        
+        # رگرسیون خطی ساده
+        slope = np.polyfit(x, y, 1)[0]
+        return slope
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# تست سریع
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+if __name__ == "__main__":
+    print("\n" + "="*70)
+    print("🧪 تست Model Monitor")
+    print("="*70)
+    
+    # ساخت monitor
+    monitor = ModelMonitor(
+        train_accuracy=0.68,
+        min_accuracy=0.45,
+        warning_threshold=0.50
+    )
+    
+    # شبیه‌سازی پیش‌بینی‌ها
+    print("\n📊 شبیه‌سازی پیش‌بینی‌ها...")
+    
+    np.random.seed(42)
+    
+    for i in range(50):
+        # پیش‌بینی تصادفی
+        prediction = np.random.rand()
+        confidence = abs(prediction - 0.5) * 2
+        
+        if prediction > 0.65:
+            direction = 'BUY'
+        elif prediction < 0.35:
+            direction = 'SELL'
+        else:
+            direction = 'NONE'
+        
+        monitor.log_prediction(
+            prediction=prediction,
+            confidence=confidence,
+            direction=direction,
+            notes=f"Test #{i+1}"
+        )
+        
+        # شبیه‌سازی نتیجه (70% درست)
+        was_correct = np.random.rand() < 0.70
+        monitor.log_outcome(
+            prediction_id=i+1,
+            actual_direction=direction,
+            was_correct=was_correct,
+            profit=np.random.uniform(-50, 100) if was_correct else np.random.uniform(-100, -20)
+        )
+    
+    print("   ✅ 50 پیش‌بینی شبیه‌سازی شد")
+    
+    # محاسبه متریک‌ها
+    print("\n📊 محاسبه متریک‌ها...")
+    metrics = monitor.calculate_daily_metrics()
+    
+    print(f"\n📈 نتایج امروز:")
+    print(f"   کل پیش‌بینی‌ها: {metrics['total_predictions']}")
+    print(f"   تأیید شده: {metrics['verified_predictions']}")
+    print(f"   درست: {metrics['correct_predictions']}")
+    print(f"   Accuracy: {metrics['accuracy']*100:.1f}%")
+    print(f"   میانگین اطمینان: {metrics['avg_confidence']*100:.1f}%")
+    
+    # بررسی نیاز به Retrain
+    print("\n🔍 بررسی نیاز به Retrain...")
+    should_retrain, reason = monitor.should_retrain()
+    
+    if should_retrain:
+        print(f"   ⚠️  نیاز به Retrain: {reason}")
+    else:
+        print(f"   ✅ {reason}")
+    
+    # وضعیت عملکرد
+    print("\n📊 وضعیت عملکرد:")
+    status = monitor.get_performance_status()
+    print(f"   وضعیت: {status['status']}")
+    print(f"   پیام: {status['message']}")
+    print(f"   Accuracy: {status['accuracy']*100:.1f}%")
+    print(f"   تنزل: {status['degradation']*100:.1f}%")
+    
+    # تحلیل confidence
+    print("\n📊 تحلیل بر اساس Confidence:")
+    by_conf = monitor.analyze_by_confidence()
+    for label, data in by_conf.items():
+        if data['total'] > 0:
+            print(f"   {label} ({data['range']}): {data['accuracy']*100:.1f}% ({data['correct']}/{data['total']})")
+    
+    # Confusion Matrix
+    print("\n📊 Confusion Matrix:")
+    matrix = monitor.get_confusion_matrix()
+    print(f"   BUY: {matrix['buy']['accuracy']*100:.1f}% ({matrix['buy']['correct']}/{matrix['buy']['total']})")
+    print(f"   SELL: {matrix['sell']['accuracy']*100:.1f}% ({matrix['sell']['correct']}/{matrix['sell']['total']})")
+    
+    print("\n" + "="*70)
+    print("✅ تست کامل شد!")
+    print("="*70)
+
+
+
+
+
+"""
+====================================================================
+فایل: alert_system.py
+سیستم هشدار جامع برای ربات
+====================================================================
+"""
+
+import json
+import sqlite3
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Callable
+from dataclasses import dataclass
+from colorama import Fore, Style, init
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+init(autoreset=True)
+
+
+@dataclass
+class Alert:
+    """یک هشدار"""
+    alert_type: str
+    severity: str  # INFO, WARNING, CRITICAL
+    title: str
+    message: str
+    data: Dict = None
+    timestamp: datetime = None
+    
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.now()
+
+
+class AlertSystem:
+    """
+    سیستم هشدار جامع
+    
+    قابلیت‌ها:
+    - هشدارهای رنگی در کنسول
+    - ذخیره در فایل لاگ
+    - ذخیره در دیتابیس
+    - ارسال ایمیل (اختیاری)
+    - ارسال تلگرام (اختیاری)
+    - Custom handlers
+    """
+    
+    def __init__(self, config: Dict = None):
+        """
+        Args:
+            config: تنظیمات شامل email, telegram, etc.
+        """
+        self.config = config or {}
+        
+        # مسیرها
+        self.log_dir = Path('logs')
+        self.log_dir.mkdir(exist_ok=True)
+        
+        self.db_path = self.log_dir / 'alerts.db'
+        self.log_file = self.log_dir / 'alerts.log'
+        
+        # راه‌اندازی database
+        self._init_database()
+        
+        # Custom handlers
+        self.custom_handlers: List[Callable] = []
+        
+        # آمار
+        self.alert_counts = {
+            'INFO': 0,
+            'WARNING': 0,
+            'CRITICAL': 0
+        }
+        
+        print("✅ Alert System راه‌اندازی شد")
+    
+    def _init_database(self):
+        """راه‌اندازی دیتابیس"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS alerts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT,
+                alert_type TEXT,
+                severity TEXT,
+                title TEXT,
+                message TEXT,
+                data JSON,
+                acknowledged BOOLEAN DEFAULT 0
+            )
+        ''')
+        
+        conn.commit()
+        conn.close()
+    
+    def send_alert(self, alert: Alert):
+        """
+        ارسال یک هشدار
+        
+        Args:
+            alert: شیء Alert
+        """
+        # آمار
+        self.alert_counts[alert.severity] += 1
+        
+        # 1. نمایش در کنسول
+        self._print_console(alert)
+        
+        # 2. ذخیره در فایل
+        self._save_to_file(alert)
+        
+        # 3. ذخیره در دیتابیس
+        self._save_to_db(alert)
+        
+        # 4. ارسال ایمیل (اگر فعال باشد)
+        if alert.severity == 'CRITICAL' and self.config.get('email_enabled'):
+            self._send_email(alert)
+        
+        # 5. ارسال تلگرام (اگر فعال باشد)
+        if alert.severity in ['WARNING', 'CRITICAL'] and self.config.get('telegram_enabled'):
+            self._send_telegram(alert)
+        
+        # 6. Custom handlers
+        for handler in self.custom_handlers:
+            try:
+                handler(alert)
+            except Exception as e:
+                print(f"⚠️ خطا در custom handler: {e}")
+    
+    def _print_console(self, alert: Alert):
+        """چاپ رنگی در کنسول"""
+        # انتخاب رنگ و ایموجی
+        if alert.severity == 'INFO':
+            color = Fore.CYAN
+            emoji = "ℹ️"
+        elif alert.severity == 'WARNING':
+            color = Fore.YELLOW
+            emoji = "⚠️"
+        else:  # CRITICAL
+            color = Fore.RED
+            emoji = "🚨"
+        
+        # چاپ
+        time_str = alert.timestamp.strftime('%H:%M:%S')
+        
+        print(f"\n{color}{'='*70}{Style.RESET_ALL}")
+        print(f"{color}{emoji} {alert.severity} - {alert.title}{Style.RESET_ALL}")
+        print(f"{color}{'='*70}{Style.RESET_ALL}")
+        print(f"{color}[{time_str}] {alert.message}{Style.RESET_ALL}")
+        
+        # داده اضافی
+        if alert.data:
+            print(f"\n{color}📊 جزئیات:{Style.RESET_ALL}")
+            for key, value in alert.data.items():
+                print(f"{color}   {key}: {value}{Style.RESET_ALL}")
+        
+        print(f"{color}{'='*70}{Style.RESET_ALL}\n")
+    
+    def _save_to_file(self, alert: Alert):
+        """ذخیره در فایل لاگ"""
+        with open(self.log_file, 'a', encoding='utf-8') as f:
+            timestamp = alert.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+            line = f"[{timestamp}] [{alert.severity}] {alert.title}: {alert.message}\n"
+            f.write(line)
+    
+    def _save_to_db(self, alert: Alert):
+        """ذخیره در دیتابیس"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO alerts 
+            (timestamp, alert_type, severity, title, message, data)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (
+            alert.timestamp.isoformat(),
+            alert.alert_type,
+            alert.severity,
+            alert.title,
+            alert.message,
+            json.dumps(alert.data) if alert.data else None
+        ))
+        
+        conn.commit()
+        conn.close()
+    
+    def _send_email(self, alert: Alert):
+        """ارسال ایمیل"""
+        try:
+            email_config = self.config.get('email', {})
+            
+            if not all(k in email_config for k in ['smtp_server', 'smtp_port', 'username', 'password', 'to']):
+                return
+            
+            # ساخت پیام
+            msg = MIMEMultipart()
+            msg['From'] = email_config['username']
+            msg['To'] = email_config['to']
+            msg['Subject'] = f"🚨 {alert.title}"
+            
+            body = f"""
+هشدار {alert.severity}
+
+{alert.title}
+
+{alert.message}
+
+زمان: {alert.timestamp.strftime('%Y-%m-%d %H:%M:%S')}
+
+---
+ارسال شده توسط Alert System
+            """
+            
+            msg.attach(MIMEText(body, 'plain', 'utf-8'))
+            
+            # ارسال
+            server = smtplib.SMTP(email_config['smtp_server'], email_config['smtp_port'])
+            server.starttls()
+            server.login(email_config['username'], email_config['password'])
+            server.send_message(msg)
+            server.quit()
+            
+            print("✅ ایمیل هشدار ارسال شد")
+            
+        except Exception as e:
+            print(f"❌ خطا در ارسال ایمیل: {e}")
+    
+    def _send_telegram(self, alert: Alert):
+        """ارسال به تلگرام"""
+        try:
+            telegram_config = self.config.get('telegram', {})
+            
+            if not all(k in telegram_config for k in ['bot_token', 'chat_id']):
+                return
+            
+            import requests
+            
+            # ایموجی
+            emoji = "🚨" if alert.severity == 'CRITICAL' else "⚠️"
+            
+            # پیام
+            text = f"""
+{emoji} *{alert.severity}*
+
+*{alert.title}*
+
+{alert.message}
+
+_زمان: {alert.timestamp.strftime('%H:%M:%S')}_
+            """
+            
+            # ارسال
+            url = f"https://api.telegram.org/bot{telegram_config['bot_token']}/sendMessage"
+            
+            payload = {
+                'chat_id': telegram_config['chat_id'],
+                'text': text,
+                'parse_mode': 'Markdown'
+            }
+            
+            response = requests.post(url, json=payload, timeout=10)
+            
+            if response.status_code == 200:
+                print("✅ پیام تلگرام ارسال شد")
+            else:
+                print(f"❌ خطا در ارسال تلگرام: {response.text}")
+                
+        except Exception as e:
+            print(f"❌ خطا در ارسال تلگرام: {e}")
+    
+    def add_custom_handler(self, handler: Callable):
+        """
+        اضافه کردن handler سفارشی
+        
+        Args:
+            handler: تابعی که Alert را می‌گیرد
+        """
+        self.custom_handlers.append(handler)
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # هشدارهای از پیش تعریف شده
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def alert_high_drawdown(self, drawdown_pct: float, threshold: float):
+        """هشدار Drawdown بالا"""
+        alert = Alert(
+            alert_type='HIGH_DRAWDOWN',
+            severity='CRITICAL' if drawdown_pct > threshold * 1.5 else 'WARNING',
+            title='Drawdown بالا',
+            message=f'Drawdown به {drawdown_pct:.2f}% رسیده است (حد: {threshold:.2f}%)',
+            data={
+                'drawdown_pct': drawdown_pct,
+                'threshold': threshold
+            }
+        )
+        self.send_alert(alert)
+    
+    def alert_connection_lost(self, service: str):
+        """هشدار قطع اتصال"""
+        alert = Alert(
+            alert_type='CONNECTION_LOST',
+            severity='CRITICAL',
+            title=f'قطع اتصال {service}',
+            message=f'اتصال به {service} قطع شده است',
+            data={'service': service}
+        )
+        self.send_alert(alert)
+    
+    def alert_unusual_spread(self, spread: float, normal: float):
+        """هشدار اسپرد غیرعادی"""
+        alert = Alert(
+            alert_type='UNUSUAL_SPREAD',
+            severity='WARNING',
+            title='اسپرد غیرعادی',
+            message=f'اسپرد {spread*10000:.1f} پیپ است (عادی: {normal*10000:.1f})',
+            data={
+                'spread_pips': spread * 10000,
+                'normal_pips': normal * 10000
+            }
+        )
+        self.send_alert(alert)
+    
+    def alert_model_performance_low(self, accuracy: float, threshold: float):
+        """هشدار عملکرد ضعیف مدل"""
+        alert = Alert(
+            alert_type='LOW_MODEL_PERFORMANCE',
+            severity='CRITICAL',
+            title='عملکرد ضعیف مدل',
+            message=f'Accuracy مدل {accuracy*100:.1f}% است (حداقل: {threshold*100:.1f}%)',
+            data={
+                'accuracy': accuracy,
+                'threshold': threshold,
+                'recommendation': 'نیاز به Retrain'
+            }
+        )
+        self.send_alert(alert)
+    
+    def alert_daily_loss_limit(self, loss: float, limit: float):
+        """هشدار ضرر روزانه"""
+        alert = Alert(
+            alert_type='DAILY_LOSS_LIMIT',
+            severity='CRITICAL',
+            title='حد ضرر روزانه',
+            message=f'ضرر روزانه به ${loss:.2f} رسیده (حد: ${limit:.2f})',
+            data={
+                'loss': loss,
+                'limit': limit,
+                'action': 'معاملات متوقف شد'
+            }
+        )
+        self.send_alert(alert)
+    
+    def alert_system_error(self, error_type: str, error_message: str):
+        """هشدار خطای سیستمی"""
+        alert = Alert(
+            alert_type='SYSTEM_ERROR',
+            severity='CRITICAL',
+            title=f'خطای سیستم: {error_type}',
+            message=error_message,
+            data={'error_type': error_type}
+        )
+        self.send_alert(alert)
+    
+    def alert_trade_opened(self, direction: str, price: float, volume: float):
+        """اطلاع باز شدن معامله"""
+        alert = Alert(
+            alert_type='TRADE_OPENED',
+            severity='INFO',
+            title='معامله جدید',
+            message=f'{direction} {volume} لات در {price:.5f}',
+            data={
+                'direction': direction,
+                'price': price,
+                'volume': volume
+            }
+        )
+        self.send_alert(alert)
+    
+    def alert_trade_closed(self, profit: float, pips: float):
+        """اطلاع بستن معامله"""
+        severity = 'INFO' if profit > 0 else 'WARNING'
+        emoji = "✅" if profit > 0 else "❌"
+        
+        alert = Alert(
+            alert_type='TRADE_CLOSED',
+            severity=severity,
+            title=f'{emoji} معامله بسته شد',
+            message=f'سود: ${profit:.2f} ({pips:.1f} پیپ)',
+            data={
+                'profit': profit,
+                'pips': pips
+            }
+        )
+        self.send_alert(alert)
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # Query و مدیریت
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def get_recent_alerts(self, hours: int = 24, severity: str = None) -> List[Dict]:
+        """دریافت هشدارهای اخیر"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        query = '''
+            SELECT timestamp, alert_type, severity, title, message, data
+            FROM alerts
+            WHERE datetime(timestamp) >= datetime('now', '-{} hours')
+        '''.format(hours)
+        
+        if severity:
+            query += f" AND severity = '{severity}'"
+        
+        query += " ORDER BY timestamp DESC LIMIT 50"
+        
+        cursor.execute(query)
+        
+        alerts = []
+        for row in cursor.fetchall():
+            timestamp, alert_type, sev, title, message, data = row
+            
+            alerts.append({
+                'timestamp': timestamp,
+                'type': alert_type,
+                'severity': sev,
+                'title': title,
+                'message': message,
+                'data': json.loads(data) if data else {}
+            })
+        
+        conn.close()
+        return alerts
+    
+    def get_alert_stats(self, days: int = 7) -> Dict:
+        """آمار هشدارها"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT severity, COUNT(*)
+            FROM alerts
+            WHERE DATE(timestamp) >= date('now', '-{} days')
+            GROUP BY severity
+        '''.format(days))
+        
+        stats = {
+            'INFO': 0,
+            'WARNING': 0,
+            'CRITICAL': 0
+        }
+        
+        for severity, count in cursor.fetchall():
+            stats[severity] = count
+        
+        stats['total'] = sum(stats.values())
+        
+        conn.close()
+        return stats
+    
+    def print_summary(self):
+        """چاپ خلاصه"""
+        print("\n" + "="*70)
+        print("🚨 خلاصه Alert System")
+        print("="*70)
+        
+        # آمار کل
+        print(f"\n📊 آمار session فعلی:")
+        print(f"   INFO:     {self.alert_counts['INFO']}")
+        print(f"   WARNING:  {self.alert_counts['WARNING']}")
+        print(f"   CRITICAL: {self.alert_counts['CRITICAL']}")
+        print(f"   کل:      {sum(self.alert_counts.values())}")
+        
+        # آمار 7 روز گذشته
+        stats = self.get_alert_stats(7)
+        
+        print(f"\n📊 آمار 7 روز گذشته:")
+        print(f"   INFO:     {stats['INFO']}")
+        print(f"   WARNING:  {stats['WARNING']}")
+        print(f"   CRITICAL: {stats['CRITICAL']}")
+        print(f"   کل:      {stats['total']}")
+        
+        # آخرین هشدارهای بحرانی
+        recent = self.get_recent_alerts(hours=24, severity='CRITICAL')
+        
+        if recent:
+            print(f"\n🚨 آخرین هشدارهای بحرانی (24 ساعت):")
+            for alert in recent[:5]:
+                dt = datetime.fromisoformat(alert['timestamp'])
+                print(f"   [{dt.strftime('%H:%M')}] {alert['title']}")
+        
+        print("="*70)
+
+
+# ============ تست ============
+if __name__ == "__main__":
+    print("\n🧪 تست Alert System\n")
+    
+    # ساخت Alert System
+    alert_system = AlertSystem()
+    
+    # تست انواع هشدارها
+    print("1️⃣ تست هشدار INFO...")
+    alert_system.alert_trade_opened('BUY', 1.0850, 0.15)
+    
+    print("\n2️⃣ تست هشدار WARNING...")
+    alert_system.alert_unusual_spread(0.00025, 0.00012)
+    
+    print("\n3️⃣ تست هشدار CRITICAL...")
+    alert_system.alert_high_drawdown(15.5, 10.0)
+    
+    print("\n4️⃣ تست هشدار خطای سیستم...")
+    alert_system.alert_system_error('MT5_CONNECTION', 'نمی‌توان به MT5 متصل شد')
+    
+    # تست custom handler
+    print("\n5️⃣ تست Custom Handler...")
+    
+    def my_handler(alert: Alert):
+        if alert.severity == 'CRITICAL':
+            print(f"🔔 Custom Handler: {alert.title}")
+    
+    alert_system.add_custom_handler(my_handler)
+    alert_system.alert_daily_loss_limit(520.50, 500.00)
+    
+    # نمایش خلاصه
+    print("\n6️⃣ خلاصه:")
+    alert_system.print_summary()
+    
+    print("\n✅ تست Alert System موفق بود!")
+
+
+
+
+
+"""
+====================================================================
+فایل: monitored_bot.py
+ربات با سیستم مانیتورینگ و هشدار کامل
+====================================================================
+"""
+
+import MetaTrader5 as mt5
+import time
+from datetime import datetime
+from typing import Optional, Dict
+
+from config import Config
+from data_handler import prepare_live_data
+from ml_model import TradingModel
+from risk_manager import RiskManager
+from model_monitor import ModelMonitor
+from alert_system import AlertSystem, Alert
+
+
+class MonitoredBot:
+    """
+    ربات با قابلیت مانیتورینگ و هشدار کامل
+    """
+    
+    def __init__(self, config: Dict = None):
+        """
+        Args:
+            config: تنظیمات شامل email, telegram, etc.
+        """
+        self.config = config or {}
+        
+        # کامپوننت‌های اصلی
+        self.model = TradingModel()
+        self.risk = RiskManager()
+        
+        # سیستم‌های مانیتورینگ و هشدار
+        self.model_monitor = ModelMonitor()
+        self.alert_system = AlertSystem(config)
+        
+        # وضعیت
+        self.running = False
+        self.cycle_count = 0
+        self.last_equity = 0
+        self.start_equity = 0
+        
+        print("\n" + "="*70)
+        print("🤖 ربات با مانیتورینگ کامل")
+        print("="*70)
+    
+    def initialize(self) -> bool:
+        """راه‌اندازی ربات"""
+        print("\n📥 راه‌اندازی...")
+        
+        # 1. بارگذاری مدل
+        try:
+            self.model.load()
+            print("✅ مدل بارگذاری شد")
+            
+            # بررسی نیاز به Retrain
+            should_retrain, reason = self.model_monitor.should_retrain()
+            
+            if should_retrain:
+                self.alert_system.send_alert(Alert(
+                    alert_type='RETRAIN_NEEDED',
+                    severity='WARNING',
+                    title='نیاز به Retrain',
+                    message=reason,
+                    data={'recommendation': 'مدل را دوباره آموزش دهید'}
+                ))
+        
+        except Exception as e:
+            self.alert_system.alert_system_error(
+                'MODEL_LOAD',
+                f'نمی‌توان مدل را بارگذاری کرد: {e}'
+            )
+            return False
+        
+        # 2. تست اتصال MT5
+        if not mt5.initialize():
+            self.alert_system.alert_connection_lost('MT5')
+            return False
+        
+        # دریافت Equity اولیه
+        account = mt5.account_info()
+        if account:
+            self.start_equity = account.equity
+            self.last_equity = account.equity
+        
+        mt5.shutdown()
+        print("✅ اتصال MT5 برقرار است")
+        
+        return True
+    
+    def check_system_health(self) -> bool:
+        """
+        بررسی سلامت سیستم
+        
+        Returns:
+            True اگر همه چیز OK باشد
+        """
+        # 1. بررسی اتصال MT5
+        if not mt5.initialize():
+            self.alert_system.alert_connection_lost('MT5')
+            return False
+        
+        account = mt5.account_info()
+        
+        if not account:
+            mt5.shutdown()
+            self.alert_system.alert_system_error(
+                'ACCOUNT_INFO',
+                'نمی‌توان اطلاعات حساب را دریافت کرد'
+            )
+            return False
+        
+        # 2. بررسی Drawdown
+        if self.start_equity > 0:
+            current_equity = account.equity
+            dd = (self.start_equity - current_equity) / self.start_equity
+            
+            if dd > Config.MAX_DAILY_LOSS:
+                self.alert_system.alert_high_drawdown(
+                    dd * 100,
+                    Config.MAX_DAILY_LOSS * 100
+                )
+                mt5.shutdown()
+                return False
+            
+            elif dd > Config.MAX_DAILY_LOSS * 0.7:
+                # هشدار نزدیک شدن به حد
+                self.alert_system.send_alert(Alert(
+                    alert_type='APPROACHING_LIMIT',
+                    severity='WARNING',
+                    title='نزدیک به حد ضرر',
+                    message=f'Drawdown: {dd*100:.2f}% (حد: {Config.MAX_DAILY_LOSS*100:.0f}%)',
+                    data={'drawdown_pct': dd * 100}
+                ))
+        
+        # 3. بررسی اسپرد
+        tick = mt5.symbol_info_tick(Config.SYMBOL)
+        
+        if tick:
+            spread = tick.ask - tick.bid
+            normal_spread = 0.00015  # 1.5 پیپ
+            
+            if spread > normal_spread * 3:
+                self.alert_system.alert_unusual_spread(spread, normal_spread)
+        
+        mt5.shutdown()
+        return True
+    
+    def get_signal(self) -> Optional[Dict]:
+        """
+        دریافت سیگنال با ثبت در Model Monitor
+        """
+        # دریافت داده
+        df = prepare_live_data(Config.SYMBOL, Config.TIMEFRAME_PRIMARY, 200)
+        
+        if df is None or len(df) < Config.LOOKBACK_PERIOD:
+            self.alert_system.alert_system_error(
+                'DATA_ERROR',
+                'داده کافی دریافت نشد'
+            )
+            return None
+        
+        # پیش‌بینی
+        features = df[self.model.features].iloc[-Config.LOOKBACK_PERIOD:].values
+        X_scaled = self.model.scaler.transform(features)
+        X = X_scaled.reshape(1, Config.LOOKBACK_PERIOD, -1)
+        prediction = self.model.predict(X)
+        
+        # محاسبه confidence
+        confidence = abs(prediction - 0.5) * 2
+        
+        # تعیین جهت
+        if prediction > Config.BUY_THRESHOLD:
+            direction = 'BUY'
+        elif prediction < Config.SELL_THRESHOLD:
+            direction = 'SELL'
+        else:
+            direction = 'NONE'
+        
+        # ثبت در Model Monitor
+        self.model_monitor.log_prediction(
+            prediction=prediction,
+            confidence=confidence,
+            direction=direction,
+            notes=f"Cycle #{self.cycle_count}"
+        )
+        
+        # بررسی شرایط
+        if direction == 'NONE':
+            return None
+        
+        # بررسی ADX
+        current_adx = df.iloc[-1]['ADX']
+        
+        if current_adx < Config.ADX_THRESHOLD:
+            return None
+        
+        # بررسی مدیریت ریسک
+        can_trade, reason = self.risk.can_trade()
+        
+        if not can_trade:
+            return None
+        
+        # ساخت سیگنال
+        current_price = df.iloc[-1]['close']
+        current_atr = df.iloc[-1]['ATR']
+        avg_atr = df['ATR'].iloc[-20:].mean()
+        
+        if not mt5.initialize():
+            return None
+        
+        tick = mt5.symbol_info_tick(Config.SYMBOL)
+        mt5.shutdown()
+        
+        if not tick:
+            return None
+        
+        # محاسبه SL/TP
+        if direction == 'BUY':
+            entry = tick.ask
+            sl, tp, sl_dist, tp_dist = self.risk.calculate_dynamic_sl_tp(
+                entry_price=entry,
+                direction='BUY',
+                current_atr=current_atr,
+                avg_atr=avg_atr,
+                adx=current_adx
+            )
+        else:  # SELL
+            entry = tick.bid
+            sl, tp, sl_dist, tp_dist = self.risk.calculate_dynamic_sl_tp(
+                entry_price=entry,
+                direction='SELL',
+                current_atr=current_atr,
+                avg_atr=avg_atr,
+                adx=current_adx
+            )
+        
+        # محاسبه حجم
+        volume = self.risk.calculate_volume(entry, sl)
+        
+        return {
+            'direction': direction,
+            'entry': entry,
+            'sl': sl,
+            'tp': tp,
+            'volume': volume,
+            'prediction': prediction,
+            'confidence': confidence
+        }
+    
+    def execute_trade(self, signal: Dict) -> bool:
+        """اجرای معامله با هشدار"""
+        if not mt5.initialize():
+            self.alert_system.alert_connection_lost('MT5')
+            return False
+        
+        order_type = mt5.ORDER_TYPE_BUY if signal['direction'] == 'BUY' else mt5.ORDER_TYPE_SELL
+        
+        request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": Config.SYMBOL,
+            "volume": signal['volume'],
+            "type": order_type,
+            "price": signal['entry'],
+            "sl": signal['sl'],
+            "tp": signal['tp'],
+            "deviation": 20,
+            "magic": 123456,
+            "comment": "Monitored_Bot",
+            "type_filling": mt5.ORDER_FILLING_IOC,
+        }
+        
+        result = mt5.order_send(request)
+        mt5.shutdown()
+        
+        if result.retcode == mt5.TRADE_RETCODE_DONE:
+            # هشدار موفقیت
+            self.alert_system.alert_trade_opened(
+                signal['direction'],
+                signal['entry'],
+                signal['volume']
+            )
+            return True
+        else:
+            # هشدار خطا
+            self.alert_system.alert_system_error(
+                'TRADE_EXECUTION',
+                f"خطا در باز کردن معامله: {result.comment}"
+            )
+            return False
+    
+    def check_closed_positions(self):
+        """
+        بررسی و ثبت پوزیشن‌های بسته شده
+        
+        برای به‌روزرسانی Model Monitor
+        """
+        # TODO: پیاده‌سازی کامل
+        # این تابع باید تاریخچه معاملات را بررسی کند
+        # و نتایج را در Model Monitor ثبت کند
+        pass
+    
+    def run_cycle(self):
+        """یک چرخه کامل"""
+        self.cycle_count += 1
+        
+        print("\n" + "━"*70)
+        print(f"🔄 چرخه #{self.cycle_count} - {datetime.now().strftime('%H:%M:%S')}")
+        print("━"*70)
+        
+        # بررسی سلامت سیستم
+        if not self.check_system_health():
+            print("❌ سیستم ناسالم است - توقف چرخه")
+            return
+        
+        # دریافت سیگنال
+        signal = self.get_signal()
+        
+        if signal:
+            print(f"✅ سیگنال: {signal['direction']}")
+            print(f"   Confidence: {signal['confidence']*100:.1f}%")
+            
+            # اجرای معامله
+            self.execute_trade(signal)
+        else:
+            print("⏸️ بدون سیگنال")
+        
+        # بررسی پوزیشن‌های بسته
+        self.check_closed_positions()
+        
+        # محاسبه متریک‌های روزانه
+        self.model_monitor.calculate_daily_metrics()
+    
+    def run(self):
+        """حلقه اصلی"""
+        if not self.initialize():
+            print("\n❌ راه‌اندازی با خطا مواجه شد")
+            return
+        
+        print("\n" + "="*70)
+        print("✅ ربات آماده است")
+        print("="*70)
+        print(f"📊 {Config.SYMBOL} | {Config.TIMEFRAME_PRIMARY}")
+        print(f"💰 ریسک: {Config.RISK_PER_TRADE*100}% هر معامله")
+        print(f"🔔 هشدارها: فعال")
+        print("="*70)
+        
+        input("\n▶️ Enter را بزنید تا ربات شروع شود...\n")
+        
+        self.running = True
+        
+        try:
+            while self.running:
+                self.run_cycle()
+                
+                # استراحت
+                print(f"\n⏳ استراحت 60 ثانیه...")
+                time.sleep(60)
+        
+        except KeyboardInterrupt:
+            print("\n\n⏹️ توقف توسط کاربر...")
+            
+            # هشدار توقف
+            self.alert_system.send_alert(Alert(
+                alert_type='BOT_STOPPED',
+                severity='INFO',
+                title='ربات متوقف شد',
+                message='ربات توسط کاربر متوقف شد'
+            ))
+        
+        except Exception as e:
+            print(f"\n\n❌ خطا: {e}")
+            
+            # هشدار خطای بحرانی
+            self.alert_system.alert_system_error('UNKNOWN_ERROR', str(e))
+        
+        finally:
+            self.running = False
+            
+            # نمایش خلاصه
+            print("\n" + "="*70)
+            print("📊 خلاصه نهایی")
+            print("="*70)
+            
+            self.model_monitor.print_summary()
+            self.alert_system.print_summary()
+            
+            print("\n✅ ربات متوقف شد")
+
+
+# ============ اجرا ============
+if __name__ == "__main__":
+    # تنظیمات (اختیاری)
+    config = {
+        # ایمیل (اختیاری)
+        'email_enabled': False,
+        'email': {
+            'smtp_server': 'smtp.gmail.com',
+            'smtp_port': 587,
+            'username': 'your_email@gmail.com',
+            'password': 'your_password',
+            'to': 'recipient@gmail.com'
+        },
+        
+        # تلگرام (اختیاری)
+        'telegram_enabled': False,
+        'telegram': {
+            'bot_token': 'YOUR_BOT_TOKEN',
+            'chat_id': 'YOUR_CHAT_ID'
+        }
+    }
+    
+    bot = MonitoredBot(config)
+    bot.run()

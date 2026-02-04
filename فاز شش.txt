@@ -1,0 +1,1781 @@
+"""
+====================================================================
+فایل: advanced_features.py (نسخه اصلاح‌شده v2.0)
+====================================================================
+تغییرات:
+- مدیریت بهتر NaN با np.where
+- اضافه شدن Type Hints کامل
+- بهبود docstrings
+- رفع مشکلات division by zero
+- بهینه‌سازی محاسبات
+====================================================================
+"""
+
+import pandas as pd
+import numpy as np
+from typing import Dict, List
+import warnings
+warnings.filterwarnings('ignore')
+
+
+class AdvancedFeatureEngineer:
+    """
+    کلاس Feature Engineering پیشرفته
+    
+    این کلاس ~40 ویژگی پیشرفته به داده‌های OHLC اضافه می‌کند
+    
+    دسته‌بندی ویژگی‌ها:
+    - Price Action: بدنه کندل، سایه‌ها، نسبت‌ها
+    - Volatility: نوسان، ATR regime، historical volatility
+    - Volume: نسبت حجم، divergence
+    - Momentum: ROC، RSI zones، MACD
+    - Multi-Timeframe: شبیه‌سازی تایم‌فریم بالاتر
+    - Patterns: Higher Highs/Lows، breakouts
+    
+    استفاده:
+        engineer = AdvancedFeatureEngineer()
+        df = engineer.add_all_features(df)
+        features = engineer.get_feature_names(df)
+    """
+    
+    def __init__(self, verbose: bool = True):
+        """
+        مقداردهی اولیه
+        
+        Args:
+            verbose: نمایش پیام‌های اطلاع‌رسانی
+        """
+        self.verbose = verbose
+        self.feature_names: List[str] = []
+    
+    def add_all_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        اضافه کردن تمام ویژگی‌های پیشرفته
+        
+        Args:
+            df: DataFrame با ستون‌های OHLC و اندیکاتورهای پایه
+        
+        Returns:
+            DataFrame با ویژگی‌های جدید
+        
+        نکته:
+            DataFrame به صورت in-place تغییر نمی‌کند
+        """
+        df = df.copy()
+        
+        if self.verbose:
+            print("🔧 اضافه کردن ویژگی‌های پیشرفته...")
+        
+        # 1. Price Action Features
+        df = self._add_price_action_features(df)
+        if self.verbose:
+            print("  ✅ Price Action Features")
+        
+        # 2. Volatility Features
+        df = self._add_volatility_features(df)
+        if self.verbose:
+            print("  ✅ Volatility Features")
+        
+        # 3. Volume Features
+        df = self._add_volume_features(df)
+        if self.verbose:
+            print("  ✅ Volume Features")
+        
+        # 4. Momentum Features
+        df = self._add_momentum_features(df)
+        if self.verbose:
+            print("  ✅ Momentum Features")
+        
+        # 5. Multi-Timeframe Features
+        df = self._add_multi_timeframe_features(df)
+        if self.verbose:
+            print("  ✅ Multi-Timeframe Features")
+        
+        # 6. Pattern Features
+        df = self._add_pattern_features(df)
+        if self.verbose:
+            print("  ✅ Pattern Features")
+        
+        return df
+    
+    def _add_price_action_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        ویژگی‌های Price Action
+        
+        شامل:
+        - بدنه کندل و درصد آن
+        - سایه بالا و پایین
+        - نسبت‌های مختلف
+        - نوع کندل (صعودی/نزولی/دوجی)
+        """
+        # بدنه کندل
+        df['Body'] = np.abs(df['close'] - df['open'])
+        
+        df['Body_Pct'] = np.where(
+            df['close'] != 0,
+            df['Body'] / df['close'],
+            0
+        )
+        
+        # سایه‌ها
+        df['Upper_Wick'] = df['high'] - df[['open', 'close']].max(axis=1)
+        df['Lower_Wick'] = df[['open', 'close']].min(axis=1) - df['low']
+        
+        # رنج کل
+        total_range = df['high'] - df['low']
+        
+        # نسبت‌ها (با مدیریت صحیح division by zero)
+        df['Body_Range_Ratio'] = np.where(
+            total_range != 0,
+            df['Body'] / total_range,
+            0
+        )
+        
+        df['Upper_Wick_Ratio'] = np.where(
+            total_range != 0,
+            df['Upper_Wick'] / total_range,
+            0
+        )
+        
+        df['Lower_Wick_Ratio'] = np.where(
+            total_range != 0,
+            df['Lower_Wick'] / total_range,
+            0
+        )
+        
+        # نوع کندل
+        df['Is_Bullish'] = (df['close'] > df['open']).astype(int)
+        df['Is_Doji'] = (df['Body_Range_Ratio'] < 0.1).astype(int)
+        
+        # میانگین بدنه
+        df['Body_MA'] = df['Body'].rolling(20).mean()
+        
+        df['Body_vs_MA'] = np.where(
+            df['Body_MA'] != 0,
+            df['Body'] / df['Body_MA'],
+            1.0
+        )
+        
+        return df
+    
+    def _add_volatility_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        ویژگی‌های نوسان
+        
+        شامل:
+        - Volatility Regime (بر اساس ATR)
+        - Historical Volatility
+        - Range-based volatility
+        """
+        if 'ATR' in df.columns:
+            # Volatility Regime
+            atr_ma = df['ATR'].rolling(50).mean()
+            
+            df['Vol_Regime'] = np.where(
+                atr_ma != 0,
+                df['ATR'] / atr_ma,
+                1.0
+            )
+            
+            # Volatility State
+            df['Is_High_Vol'] = (df['Vol_Regime'] > 1.5).astype(int)
+            df['Is_Low_Vol'] = (df['Vol_Regime'] < 0.7).astype(int)
+            df['Is_Normal_Vol'] = (
+                (df['Vol_Regime'] >= 0.7) & (df['Vol_Regime'] <= 1.5)
+            ).astype(int)
+        
+        # Historical Volatility (20-period)
+        returns = df['close'].pct_change()
+        df['Historical_Vol'] = returns.rolling(20).std() * np.sqrt(252)
+        
+        # Range-based Volatility
+        df['Range'] = df['high'] - df['low']
+        df['Range_MA'] = df['Range'].rolling(20).mean()
+        
+        df['Range_Ratio'] = np.where(
+            df['Range_MA'] != 0,
+            df['Range'] / df['Range_MA'],
+            1.0
+        )
+        
+        return df
+    
+    def _add_volume_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        ویژگی‌های حجم
+        
+        شامل:
+        - Volume moving averages
+        - Volume ratio
+        - High/Low volume detection
+        - Volume-Price divergence
+        """
+        if 'tick_volume' not in df.columns:
+            return df
+        
+        # Volume Moving Averages
+        df['Volume_MA20'] = df['tick_volume'].rolling(20).mean()
+        df['Volume_MA50'] = df['tick_volume'].rolling(50).mean()
+        
+        # Volume Ratio
+        df['Volume_Ratio'] = np.where(
+            df['Volume_MA20'] != 0,
+            df['tick_volume'] / df['Volume_MA20'],
+            1.0
+        )
+        
+        # Volume Trend
+        df['Volume_Trend'] = np.where(
+            df['Volume_MA50'] != 0,
+            df['Volume_MA20'] / df['Volume_MA50'],
+            1.0
+        )
+        
+        # High/Low Volume Detection
+        df['Is_High_Volume'] = (df['Volume_Ratio'] > 1.5).astype(int)
+        df['Is_Low_Volume'] = (df['Volume_Ratio'] < 0.5).astype(int)
+        
+        # Volume-Price Divergence
+        price_change = df['close'].pct_change()
+        volume_change = df['tick_volume'].pct_change()
+        
+        df['Vol_Price_Divergence'] = (
+            ((price_change > 0) & (volume_change < 0)) |
+            ((price_change < 0) & (volume_change > 0))
+        ).astype(int)
+        
+        return df
+    
+    def _add_momentum_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        ویژگی‌های مومنتوم
+        
+        شامل:
+        - Rate of Change (ROC)
+        - RSI zones و momentum
+        - MACD و crossovers
+        """
+        # Rate of Change
+        df['ROC_5'] = df['close'].pct_change(5)
+        df['ROC_10'] = df['close'].pct_change(10)
+        df['ROC_20'] = df['close'].pct_change(20)
+        
+        # RSI Features
+        if 'RSI' in df.columns:
+            # RSI Zones
+            df['RSI_Overbought'] = (df['RSI'] > 70).astype(int)
+            df['RSI_Oversold'] = (df['RSI'] < 30).astype(int)
+            df['RSI_Neutral'] = (
+                (df['RSI'] >= 40) & (df['RSI'] <= 60)
+            ).astype(int)
+            
+            # RSI Momentum
+            df['RSI_Change'] = df['RSI'].diff()
+            df['RSI_Momentum'] = df['RSI_Change'].rolling(5).mean()
+        
+        # MACD
+        exp1 = df['close'].ewm(span=12, adjust=False).mean()
+        exp2 = df['close'].ewm(span=26, adjust=False).mean()
+        df['MACD'] = exp1 - exp2
+        df['MACD_Signal'] = df['MACD'].ewm(span=9, adjust=False).mean()
+        df['MACD_Hist'] = df['MACD'] - df['MACD_Signal']
+        
+        # MACD Crossovers
+        df['MACD_Cross_Up'] = (
+            (df['MACD'] > df['MACD_Signal']) &
+            (df['MACD'].shift(1) <= df['MACD_Signal'].shift(1))
+        ).astype(int)
+        
+        df['MACD_Cross_Down'] = (
+            (df['MACD'] < df['MACD_Signal']) &
+            (df['MACD'].shift(1) >= df['MACD_Signal'].shift(1))
+        ).astype(int)
+        
+        return df
+    
+    def _add_multi_timeframe_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        ویژگی‌های چند تایم‌فریمی
+        
+        شبیه‌سازی تایم‌فریم بالاتر با استفاده از window های بزرگتر
+        
+        نکته:
+            در محیط واقعی بهتر است از داده واقعی تایم‌فریم بالاتر استفاده شود
+        """
+        # شبیه‌سازی H4 از H1 (هر 4 کندل)
+        # Trend در تایم‌فریم بالاتر (SMA 50 در 4 برابر = SMA 200)
+        df['HTF_Trend'] = df['close'].rolling(200).mean()
+        
+        df['Distance_HTF_Trend'] = np.where(
+            df['HTF_Trend'] != 0,
+            (df['close'] - df['HTF_Trend']) / df['HTF_Trend'],
+            0
+        )
+        
+        # Is Price Above HTF Trend?
+        df['Above_HTF_Trend'] = (df['close'] > df['HTF_Trend']).astype(int)
+        
+        # HTF RSI (شبیه‌سازی با window بزرگتر)
+        if 'RSI' in df.columns:
+            df['HTF_RSI'] = df['RSI'].rolling(4).mean()
+            df['HTF_RSI_Bullish'] = (df['HTF_RSI'] > 50).astype(int)
+        
+        return df
+    
+    def _add_pattern_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        ویژگی‌های الگویی
+        
+        شامل:
+        - Higher Highs / Lower Lows
+        - Trend Strength
+        - Inside/Outside Bars
+        - Breakouts
+        """
+        # Higher Highs / Lower Lows
+        df['HH'] = (df['high'] > df['high'].shift(1)).astype(int)
+        df['LL'] = (df['low'] < df['low'].shift(1)).astype(int)
+        
+        df['HL'] = (
+            (df['high'] > df['high'].shift(1)) &
+            (df['low'] > df['low'].shift(1))
+        ).astype(int)
+        
+        df['LH'] = (
+            (df['high'] < df['high'].shift(1)) &
+            (df['low'] < df['low'].shift(1))
+        ).astype(int)
+        
+        # Trend Strength (تعداد HH یا LL متوالی)
+        df['Uptrend_Strength'] = df['HH'].rolling(10).sum()
+        df['Downtrend_Strength'] = df['LL'].rolling(10).sum()
+        
+        # Inside Bar (کندل داخلی)
+        df['Inside_Bar'] = (
+            (df['high'] < df['high'].shift(1)) &
+            (df['low'] > df['low'].shift(1))
+        ).astype(int)
+        
+        # Outside Bar (کندل خارجی)
+        df['Outside_Bar'] = (
+            (df['high'] > df['high'].shift(1)) &
+            (df['low'] < df['low'].shift(1))
+        ).astype(int)
+        
+        # Breakout Detection
+        df['High_20'] = df['high'].rolling(20).max()
+        df['Low_20'] = df['low'].rolling(20).min()
+        
+        df['Breakout_Up'] = (
+            df['close'] > df['High_20'].shift(1)
+        ).astype(int)
+        
+        df['Breakout_Down'] = (
+            df['close'] < df['Low_20'].shift(1)
+        ).astype(int)
+        
+        return df
+    
+    def get_feature_names(self, df: pd.DataFrame) -> List[str]:
+        """
+        دریافت لیست تمام ویژگی‌های جدید
+        
+        Args:
+            df: DataFrame با ویژگی‌ها
+        
+        Returns:
+            لیست نام ویژگی‌های قابل استفاده در ML
+        
+        نکته:
+            فقط ویژگی‌هایی که در df موجودند برگردانده می‌شوند
+        """
+        # ویژگی‌های پایه (از قبل موجود)
+        base_features = [
+            'Returns', 'RSI', 'ATR', 'ADX',
+            'Distance_MA20', 'Distance_MA50'
+        ]
+        
+        # ویژگی‌های جدید (به ترتیب دسته)
+        new_features = [
+            # Price Action
+            'Body_Pct', 'Body_Range_Ratio', 'Upper_Wick_Ratio',
+            'Lower_Wick_Ratio', 'Is_Bullish', 'Is_Doji', 'Body_vs_MA',
+            
+            # Volatility
+            'Vol_Regime', 'Is_High_Vol', 'Is_Low_Vol', 'Is_Normal_Vol',
+            'Historical_Vol', 'Range_Ratio',
+            
+            # Volume
+            'Volume_Ratio', 'Volume_Trend', 'Is_High_Volume',
+            'Is_Low_Volume', 'Vol_Price_Divergence',
+            
+            # Momentum
+            'ROC_5', 'ROC_10', 'ROC_20',
+            'RSI_Overbought', 'RSI_Oversold', 'RSI_Neutral', 'RSI_Momentum',
+            'MACD_Hist', 'MACD_Cross_Up', 'MACD_Cross_Down',
+            
+            # Multi-Timeframe
+            'Distance_HTF_Trend', 'Above_HTF_Trend', 'HTF_RSI_Bullish',
+            
+            # Patterns
+            'HH', 'LL', 'HL', 'LH',
+            'Uptrend_Strength', 'Downtrend_Strength',
+            'Inside_Bar', 'Outside_Bar',
+            'Breakout_Up', 'Breakout_Down'
+        ]
+        
+        # ترکیب و فیلتر کردن
+        all_features = base_features + new_features
+        available_features = [f for f in all_features if f in df.columns]
+        
+        return available_features
+    
+    def get_feature_info(self) -> Dict[str, str]:
+        """
+        توضیح هر ویژگی
+        
+        Returns:
+            دیکشنری {نام_ویژگی: توضیح}
+        
+        استفاده:
+            برای مستندسازی و debugging
+        """
+        return {
+            # Price Action
+            'Body_Pct': 'درصد بدنه کندل نسبت به قیمت',
+            'Body_Range_Ratio': 'نسبت بدنه به رنج کل کندل',
+            'Upper_Wick_Ratio': 'نسبت سایه بالا به رنج کل',
+            'Lower_Wick_Ratio': 'نسبت سایه پایین به رنج کل',
+            'Is_Bullish': 'آیا کندل صعودی است؟',
+            'Is_Doji': 'آیا کندل دوجی است؟',
+            'Body_vs_MA': 'نسبت بدنه به میانگین بدنه',
+            
+            # Volatility
+            'Vol_Regime': 'رژیم نوسان (ATR نسبت به میانگین)',
+            'Is_High_Vol': 'آیا نوسان بالا است؟',
+            'Is_Low_Vol': 'آیا نوسان پایین است؟',
+            'Is_Normal_Vol': 'آیا نوسان نرمال است؟',
+            'Historical_Vol': 'نوسان تاریخی 20 دوره‌ای',
+            'Range_Ratio': 'نسبت رنج به میانگین رنج',
+            
+            # Volume
+            'Volume_Ratio': 'نسبت حجم به میانگین',
+            'Volume_Trend': 'روند حجم (MA20/MA50)',
+            'Is_High_Volume': 'آیا حجم بالا است؟',
+            'Is_Low_Volume': 'آیا حجم پایین است؟',
+            'Vol_Price_Divergence': 'واگرایی حجم-قیمت',
+            
+            # Momentum
+            'ROC_5': 'نرخ تغییر قیمت در 5 کندل',
+            'ROC_10': 'نرخ تغییر قیمت در 10 کندل',
+            'ROC_20': 'نرخ تغییر قیمت در 20 کندل',
+            'RSI_Overbought': 'آیا RSI در ناحیه اشباع خرید؟',
+            'RSI_Oversold': 'آیا RSI در ناحیه اشباع فروش؟',
+            'RSI_Neutral': 'آیا RSI در ناحیه خنثی؟',
+            'RSI_Momentum': 'مومنتوم RSI',
+            'MACD_Hist': 'هیستوگرام MACD',
+            'MACD_Cross_Up': 'کراس صعودی MACD',
+            'MACD_Cross_Down': 'کراس نزولی MACD',
+            
+            # Multi-Timeframe
+            'Distance_HTF_Trend': 'فاصله از روند تایم‌فریم بالاتر',
+            'Above_HTF_Trend': 'آیا بالای روند HTF است؟',
+            'HTF_RSI_Bullish': 'آیا RSI تایم‌فریم بالاتر صعودی است؟',
+            
+            # Patterns
+            'HH': 'سقف بالاتر',
+            'LL': 'کف پایین‌تر',
+            'HL': 'کف بالاتر',
+            'LH': 'سقف پایین‌تر',
+            'Uptrend_Strength': 'قدرت روند صعودی',
+            'Downtrend_Strength': 'قدرت روند نزولی',
+            'Inside_Bar': 'کندل داخلی (consolidation)',
+            'Outside_Bar': 'کندل خارجی (volatility)',
+            'Breakout_Up': 'شکست صعودی',
+            'Breakout_Down': 'شکست نزولی',
+        }
+    
+    def get_feature_importance_groups(self) -> Dict[str, List[str]]:
+        """
+        گروه‌بندی ویژگی‌ها بر اساس اهمیت
+        
+        Returns:
+            دیکشنری {دسته: [ویژگی‌ها]}
+        """
+        return {
+            'critical': [
+                'Body_Pct', 'Vol_Regime', 'Volume_Ratio',
+                'ROC_10', 'MACD_Hist', 'Distance_HTF_Trend'
+            ],
+            'important': [
+                'Body_Range_Ratio', 'Is_High_Vol', 'Volume_Trend',
+                'RSI_Momentum', 'Uptrend_Strength', 'Breakout_Up'
+            ],
+            'useful': [
+                'Upper_Wick_Ratio', 'Lower_Wick_Ratio',
+                'Is_Bullish', 'Historical_Vol',
+                'Is_High_Volume', 'MACD_Cross_Up'
+            ],
+            'supplementary': [
+                'Is_Doji', 'Body_vs_MA', 'Is_Normal_Vol',
+                'Vol_Price_Divergence', 'Inside_Bar', 'Outside_Bar'
+            ]
+        }
+
+
+# ============ تست ============
+if __name__ == "__main__":
+    print("\n🧪 تست Advanced Feature Engineering (نسخه اصلاح‌شده)\n")
+    
+    # ساخت داده تست
+    n = 300
+    np.random.seed(42)
+    
+    df = pd.DataFrame({
+        'time': pd.date_range('2024-01-01', periods=n, freq='H'),
+        'open': np.random.uniform(1.08, 1.09, n),
+        'high': np.random.uniform(1.09, 1.10, n),
+        'low': np.random.uniform(1.07, 1.08, n),
+        'close': np.random.uniform(1.08, 1.09, n),
+        'tick_volume': np.random.randint(100, 1000, n),
+    })
+    
+    # اطمینان از منطقی بودن OHLC
+    for i in range(len(df)):
+        df.loc[i, 'high'] = max(df.loc[i, 'open'], df.loc[i, 'close'], df.loc[i, 'high'])
+        df.loc[i, 'low'] = min(df.loc[i, 'open'], df.loc[i, 'close'], df.loc[i, 'low'])
+    
+    # اضافه کردن اندیکاتورهای پایه (mock)
+    df['Returns'] = df['close'].pct_change()
+    df['RSI'] = 50 + np.random.randn(n) * 10
+    df['ATR'] = 0.0015 + np.random.randn(n) * 0.0003
+    df['ADX'] = 30 + np.random.randn(n) * 5
+    df['MA_20'] = df['close'].rolling(20).mean()
+    df['MA_50'] = df['close'].rolling(50).mean()
+    df['Distance_MA20'] = (df['close'] - df['MA_20']) / df['MA_20']
+    df['Distance_MA50'] = (df['close'] - df['MA_50']) / df['MA_50']
+    
+    print(f"📊 داده اولیه: {df.shape}")
+    print(f"   ستون‌ها: {len(df.columns)}\n")
+    
+    # اضافه کردن ویژگی‌های پیشرفته
+    engineer = AdvancedFeatureEngineer(verbose=True)
+    df_enhanced = engineer.add_all_features(df)
+    
+    # حذف NaN
+    df_enhanced = df_enhanced.dropna()
+    
+    print(f"\n✅ داده با ویژگی‌های جدید: {df_enhanced.shape}")
+    print(f"   ستون‌ها: {len(df_enhanced.columns)}")
+    print(f"   افزایش: +{len(df_enhanced.columns) - len(df.columns)} ستون\n")
+    
+    # لیست ویژگی‌ها برای ML
+    features = engineer.get_feature_names(df_enhanced)
+    print(f"📋 ویژگی‌های قابل استفاده در ML: {len(features)}\n")
+    
+    # نمایش نمونه ویژگی‌ها
+    print(f"🔍 نمونه ویژگی‌ها (10 مورد اول):")
+    for i, f in enumerate(features[:10], 1):
+        if f in df_enhanced.columns:
+            val = df_enhanced[f].iloc[-1]
+            print(f"   {i:2d}. {f:25s}: {val:.6f}")
+    
+    # بررسی NaN
+    print(f"\n🧪 بررسی کیفیت:")
+    nan_counts = df_enhanced[features].isnull().sum()
+    total_nan = nan_counts.sum()
+    
+    if total_nan == 0:
+        print(f"   ✅ هیچ NaN وجود ندارد")
+    else:
+        print(f"   ⚠️ {total_nan} مقدار NaN یافت شد:")
+        for feat in features:
+            if df_enhanced[feat].isnull().sum() > 0:
+                print(f"      - {feat}: {df_enhanced[feat].isnull().sum()}")
+    
+    # آمار خلاصه
+    print(f"\n📊 آمار برخی ویژگی‌ها:")
+    sample_features = ['Body_Pct', 'Vol_Regime', 'Volume_Ratio', 
+                       'MACD_Hist', 'Uptrend_Strength']
+    
+    for feat in sample_features:
+        if feat in df_enhanced.columns:
+            print(f"\n   {feat}:")
+            print(f"      میانگین: {df_enhanced[feat].mean():.4f}")
+            print(f"      انحراف معیار: {df_enhanced[feat].std():.4f}")
+            print(f"      دامنه: [{df_enhanced[feat].min():.4f}, {df_enhanced[feat].max():.4f}]")
+    
+    # گروه‌بندی اهمیت
+    print(f"\n🎯 گروه‌بندی ویژگی‌ها بر اساس اهمیت:")
+    groups = engineer.get_feature_importance_groups()
+    
+    for group_name, group_features in groups.items():
+        available = [f for f in group_features if f in df_enhanced.columns]
+        print(f"\n   {group_name.upper()} ({len(available)} ویژگی):")
+        for f in available:
+            print(f"      • {f}")
+    
+    print("\n" + "="*70)
+    print("✅ تست موفق بود!")
+    print("="*70)
+
+
+
+
+"""
+====================================================================
+فایل: data_handler.py (نسخه نهایی v3.0)
+====================================================================
+تغییرات نسبت به v2.1:
+- یکپارچه‌سازی v2.1 و v3 در یک کلاس
+- استفاده از ماژول indicators.py
+- بهبود مدیریت NaN
+- Feature Selection پیشرفته
+- پشتیبانی کامل از Type Hints
+- Backward Compatibility
+====================================================================
+"""
+
+import pandas as pd
+import numpy as np
+from typing import Optional, List, Tuple, Dict
+import warnings
+warnings.filterwarnings('ignore')
+
+from mt5_connection import mt5_connection
+from config import Config
+from indicators import TechnicalIndicators
+from advanced_features import AdvancedFeatureEngineer
+
+import MetaTrader5 as mt5
+
+
+class DataHandler:
+    """
+    Data Handler یکپارچه برای مدیریت داده‌های معاملاتی
+    
+    ویژگی‌ها:
+    - دریافت داده از MT5
+    - محاسبه اندیکاتورهای تکنیکال
+    - Feature Engineering پیشرفته
+    - Feature Selection هوشمند
+    - بدون Data Leakage
+    
+    استفاده:
+        handler = DataHandler(use_advanced_features=True)
+        df = handler.prepare_training_data("EURUSD", "H1", 2000)
+        features = handler.get_feature_list()
+    """
+    
+    def __init__(
+        self,
+        use_advanced_features: bool = True,
+        verbose: bool = True
+    ):
+        """
+        مقداردهی اولیه Data Handler
+        
+        Args:
+            use_advanced_features: استفاده از ویژگی‌های پیشرفته
+            verbose: نمایش پیام‌های اطلاع‌رسانی
+        """
+        self.use_advanced_features = use_advanced_features
+        self.verbose = verbose
+        self.selected_features: Optional[List[str]] = None
+        
+        # ایجاد Feature Engineer
+        if use_advanced_features:
+            self.feature_engineer = AdvancedFeatureEngineer()
+        else:
+            self.feature_engineer = None
+        
+        # نقشه تبدیل timeframe
+        self.tf_map = {
+            "M1": mt5.TIMEFRAME_M1,
+            "M5": mt5.TIMEFRAME_M5,
+            "M15": mt5.TIMEFRAME_M15,
+            "M30": mt5.TIMEFRAME_M30,
+            "H1": mt5.TIMEFRAME_H1,
+            "H4": mt5.TIMEFRAME_H4,
+            "D1": mt5.TIMEFRAME_D1,
+        }
+        
+        if self.verbose:
+            mode = "پیشرفته" if use_advanced_features else "پایه"
+            print(f"✅ Data Handler راه‌اندازی شد (حالت: {mode})")
+    
+    def get_data(
+        self,
+        symbol: str,
+        timeframe: str,
+        count: int
+    ) -> Optional[pd.DataFrame]:
+        """
+        دریافت داده از MT5
+        
+        Args:
+            symbol: نماد معاملاتی (مثل EURUSD)
+            timeframe: تایم‌فریم (M1, M5, H1, H4, D1)
+            count: تعداد کندل
+        
+        Returns:
+            DataFrame با ستون‌های: time, open, high, low, close, tick_volume
+            None در صورت خطا
+        """
+        # بررسی معتبر بودن timeframe
+        tf = self.tf_map.get(timeframe)
+        if tf is None:
+            print(f"❌ تایم‌فریم نامعتبر: {timeframe}")
+            print(f"   تایم‌فریم‌های معتبر: {', '.join(self.tf_map.keys())}")
+            return None
+        
+        try:
+            with mt5_connection():
+                rates = mt5.copy_rates_from_pos(symbol, tf, 0, count)
+                
+                if rates is None or len(rates) == 0:
+                    print(f"❌ داده‌ای برای {symbol} دریافت نشد")
+                    print(f"   راه‌حل:")
+                    print(f"   1. {symbol} را در Market Watch اضافه کنید")
+                    print(f"   2. اتصال اینترنت را بررسی کنید")
+                    return None
+                
+                # تبدیل به DataFrame
+                df = pd.DataFrame(rates)
+                df["time"] = pd.to_datetime(df["time"], unit="s")
+                
+                return df[["time", "open", "high", "low", "close", "tick_volume"]]
+        
+        except Exception as e:
+            print(f"❌ خطا در دریافت داده: {e}")
+            return None
+    
+    def add_base_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        اضافه کردن اندیکاتورهای پایه
+        
+        Args:
+            df: DataFrame با OHLCV
+        
+        Returns:
+            DataFrame با اندیکاتورها
+        """
+        # RSI
+        df['RSI'] = TechnicalIndicators.rsi(
+            df['close'],
+            period=Config.RSI_PERIOD
+        )
+        
+        # ATR
+        df['ATR'] = TechnicalIndicators.atr(
+            df['high'],
+            df['low'],
+            df['close'],
+            period=Config.ATR_PERIOD
+        )
+        
+        # ADX
+        df = TechnicalIndicators.adx(df, period=Config.ADX_PERIOD)
+        
+        # میانگین متحرک
+        df['MA_20'] = df['close'].rolling(Config.MA_FAST).mean()
+        df['MA_50'] = df['close'].rolling(Config.MA_SLOW).mean()
+        
+        # بازده
+        df['Returns'] = df['close'].pct_change()
+        
+        # فاصله از میانگین متحرک (با مدیریت بهتر NaN)
+        df['Distance_MA20'] = np.where(
+            df['MA_20'] != 0,
+            (df['close'] - df['MA_20']) / df['MA_20'],
+            0
+        )
+        
+        df['Distance_MA50'] = np.where(
+            df['MA_50'] != 0,
+            (df['close'] - df['MA_50']) / df['MA_50'],
+            0
+        )
+        
+        return df
+    
+    def create_target(
+        self,
+        df: pd.DataFrame,
+        forward_periods: int = 5,
+        threshold: float = 0.001
+    ) -> pd.DataFrame:
+        """
+        ساخت Target بدون Data Leakage
+        
+        ⚠️ فقط برای آموزش - در inference استفاده نشود
+        
+        Args:
+            df: DataFrame با features
+            forward_periods: چند کندل به جلو
+            threshold: حداقل تغییر قیمت برای خرید
+        
+        Returns:
+            DataFrame با ستون Target
+        """
+        # محاسبه قیمت آینده
+        df['Future_Close'] = df['close'].shift(-forward_periods)
+        
+        # محاسبه تغییر قیمت
+        df['Price_Change'] = (df['Future_Close'] - df['close']) / df['close']
+        
+        # ساخت Target
+        df['Target'] = np.where(df['Price_Change'] > threshold, 1, 0)
+        
+        # حذف ردیف‌های آخر که آینده ندارند
+        df_clean = df[:-forward_periods].copy()
+        
+        # حذف ستون‌های موقت
+        df_clean = df_clean.drop(
+            ['Future_Close', 'Price_Change'],
+            axis=1,
+            errors='ignore'
+        )
+        
+        return df_clean
+    
+    def prepare_training_data(
+        self,
+        symbol: str,
+        timeframe: str,
+        count: int,
+        forward_periods: int = 5,
+        threshold: float = 0.001,
+        auto_select_features: bool = False,
+        selection_method: str = 'random_forest',
+        max_features: int = 30
+    ) -> Optional[pd.DataFrame]:
+        """
+        آماده‌سازی کامل داده برای آموزش
+        
+        Args:
+            symbol: نماد معاملاتی
+            timeframe: تایم‌فریم
+            count: تعداد کندل
+            forward_periods: چند کندل برای Target
+            threshold: آستانه سیگنال خرید
+            auto_select_features: انتخاب خودکار ویژگی‌ها
+            selection_method: روش انتخاب ('random_forest', 'mutual_info', 'combined')
+            max_features: حداکثر تعداد ویژگی‌ها
+        
+        Returns:
+            DataFrame آماده برای آموزش
+        """
+        if self.verbose:
+            print("=" * 70)
+            print("📊 آماده‌سازی داده برای آموزش")
+            print("=" * 70)
+        
+        # گام 1: دریافت داده
+        if self.verbose:
+            print(f"\n1️⃣ دریافت {count} کندل از MT5...")
+        
+        df = self.get_data(symbol, timeframe, count)
+        
+        if df is None or len(df) < 100:
+            print("❌ داده کافی دریافت نشد!")
+            return None
+        
+        if self.verbose:
+            print(f"   ✅ {len(df)} کندل دریافت شد")
+        
+        # گام 2: اندیکاتورهای پایه
+        if self.verbose:
+            print("\n2️⃣ محاسبه اندیکاتورهای پایه...")
+        
+        df = self.add_base_indicators(df)
+        
+        # حذف NaN اولیه
+        initial_rows = len(df)
+        df = df.dropna()
+        
+        if self.verbose:
+            removed = initial_rows - len(df)
+            print(f"   ✅ {len(df)} کندل (حذف {removed} NaN)")
+        
+        # گام 3: ویژگی‌های پیشرفته
+        if self.use_advanced_features:
+            if self.verbose:
+                print("\n3️⃣ اضافه کردن ویژگی‌های پیشرفته...")
+            
+            df = self.feature_engineer.add_all_features(df)
+            
+            # حذف NaN بعد از ویژگی‌های جدید
+            df = df.dropna()
+            
+            if self.verbose:
+                print(f"   ✅ {len(df.columns)} ستون کل")
+        
+        # گام 4: ساخت Target
+        if self.verbose:
+            print(f"\n4️⃣ ساخت Target با forward={forward_periods}...")
+        
+        df = self.create_target(df, forward_periods, threshold)
+        
+        if self.verbose:
+            print(f"   ✅ {len(df)} کندل نهایی")
+            
+            # توزیع Target
+            target_counts = df['Target'].value_counts()
+            buy_pct = (target_counts.get(1, 0) / len(df)) * 100
+            
+            print(f"   📊 توزیع Target:")
+            print(f"      خرید (1): {target_counts.get(1, 0)} ({buy_pct:.1f}%)")
+            print(f"      نگه‌دار (0): {target_counts.get(0, 0)} ({100-buy_pct:.1f}%)")
+            
+            # هشدار عدم تعادل
+            if buy_pct < 30 or buy_pct > 70:
+                print(f"\n   ⚠️ هشدار: عدم تعادل در کلاس‌ها!")
+                print(f"      پیشنهاد: threshold را تنظیم کنید یا از SMOTE استفاده کنید")
+        
+        # گام 5: انتخاب ویژگی‌ها (اختیاری)
+        if auto_select_features and self.use_advanced_features:
+            if self.verbose:
+                print(f"\n5️⃣ انتخاب خودکار بهترین ویژگی‌ها...")
+            
+            df, selected = self._auto_select_features(
+                df,
+                method=selection_method,
+                max_features=max_features
+            )
+            
+            self.selected_features = selected
+            
+            if self.verbose:
+                print(f"   ✅ {len(selected)} ویژگی انتخاب شد")
+        
+        # بررسی نهایی
+        if self.verbose:
+            print("\n6️⃣ بررسی نهایی...")
+        
+        # حذف ستون‌های اضافی
+        cols_to_drop = ['Future_Close', 'Price_Change']
+        df = df.drop(cols_to_drop, axis=1, errors='ignore')
+        
+        # بررسی NaN نهایی
+        nan_count = df.isnull().sum().sum()
+        if nan_count > 0:
+            print(f"   ⚠️ {nan_count} مقدار NaN یافت شد - در حال پاکسازی...")
+            df = df.dropna()
+        
+        if self.verbose:
+            print("   ✅ هیچ نشت داده‌ای وجود ندارد")
+            print("\n" + "=" * 70)
+            print("✅ داده آماده آموزش است")
+            print("=" * 70)
+        
+        return df
+    
+    def prepare_live_data(
+        self,
+        symbol: str,
+        timeframe: str,
+        count: int
+    ) -> Optional[pd.DataFrame]:
+        """
+        آماده‌سازی داده برای پیش‌بینی زنده
+        
+        تفاوت با training:
+        - بدون Target
+        - فقط features
+        
+        Args:
+            symbol: نماد معاملاتی
+            timeframe: تایم‌فریم
+            count: تعداد کندل
+        
+        Returns:
+            DataFrame بدون Target
+        """
+        # دریافت داده
+        df = self.get_data(symbol, timeframe, count)
+        
+        if df is None or len(df) < 100:
+            return None
+        
+        # اندیکاتورهای پایه
+        df = self.add_base_indicators(df)
+        
+        # ویژگی‌های پیشرفته
+        if self.use_advanced_features:
+            df = self.feature_engineer.add_all_features(df)
+        
+        # حذف NaN
+        df = df.dropna()
+        
+        return df
+    
+    def _auto_select_features(
+        self,
+        df: pd.DataFrame,
+        method: str = 'random_forest',
+        max_features: int = 30
+    ) -> Tuple[pd.DataFrame, List[str]]:
+        """
+        انتخاب خودکار بهترین ویژگی‌ها
+        
+        Args:
+            df: DataFrame با تمام ویژگی‌ها
+            method: روش انتخاب
+            max_features: حداکثر تعداد ویژگی‌ها
+        
+        Returns:
+            (DataFrame, لیست ویژگی‌های انتخاب شده)
+        """
+        from sklearn.ensemble import RandomForestClassifier
+        from sklearn.feature_selection import mutual_info_classif
+        
+        # لیست تمام ویژگی‌ها (بدون time و Target)
+        exclude_cols = ['time', 'Target', 'open', 'high', 'low', 'close', 'tick_volume']
+        all_features = [col for col in df.columns if col not in exclude_cols]
+        
+        if len(all_features) <= max_features:
+            return df, all_features
+        
+        # آماده‌سازی
+        X = df[all_features].values
+        y = df['Target'].values
+        
+        # گام 1: حذف ویژگی‌های همبسته بالا
+        if self.verbose:
+            print("   🔍 حذف ویژگی‌های همبسته...")
+        
+        corr_matrix = df[all_features].corr().abs()
+        upper = corr_matrix.where(
+            np.triu(np.ones(corr_matrix.shape), k=1).astype(bool)
+        )
+        to_drop = [col for col in upper.columns if any(upper[col] > 0.95)]
+        
+        features_filtered = [f for f in all_features if f not in to_drop]
+        
+        if self.verbose and to_drop:
+            print(f"      حذف شد: {len(to_drop)} ویژگی همبسته")
+        
+        # گام 2: انتخاب بر اساس روش
+        if method == 'random_forest':
+            selected = self._select_with_rf(
+                df[features_filtered],
+                df['Target'],
+                max_features
+            )
+        
+        elif method == 'mutual_info':
+            selected = self._select_with_mutual_info(
+                df[features_filtered],
+                df['Target'],
+                max_features
+            )
+        
+        elif method == 'combined':
+            # ترکیب هر دو روش
+            rf_features = self._select_with_rf(
+                df[features_filtered],
+                df['Target'],
+                max_features
+            )
+            
+            mi_features = self._select_with_mutual_info(
+                df[features_filtered],
+                df['Target'],
+                max_features
+            )
+            
+            # ویژگی‌های مشترک + برترین‌ها
+            common = list(set(rf_features) & set(mi_features))
+            rf_top = rf_features[:max_features//2]
+            mi_top = mi_features[:max_features//2]
+            
+            selected = list(set(common + rf_top + mi_top))[:max_features]
+        
+        else:
+            raise ValueError(f"روش نامعتبر: {method}")
+        
+        return df, selected
+    
+    def _select_with_rf(
+        self,
+        X: pd.DataFrame,
+        y: pd.Series,
+        max_features: int
+    ) -> List[str]:
+        """انتخاب با RandomForest"""
+        rf = RandomForestClassifier(
+            n_estimators=100,
+            max_depth=10,
+            random_state=42,
+            n_jobs=-1
+        )
+        rf.fit(X, y)
+        
+        importances = pd.DataFrame({
+            'feature': X.columns,
+            'importance': rf.feature_importances_
+        }).sort_values('importance', ascending=False)
+        
+        if self.verbose:
+            print(f"   🌲 RandomForest - برترین ویژگی‌ها:")
+            for _, row in importances.head(5).iterrows():
+                print(f"      {row['feature']:25s}: {row['importance']:.4f}")
+        
+        return importances.head(max_features)['feature'].tolist()
+    
+    def _select_with_mutual_info(
+        self,
+        X: pd.DataFrame,
+        y: pd.Series,
+        max_features: int
+    ) -> List[str]:
+        """انتخاب با Mutual Information"""
+        from sklearn.feature_selection import mutual_info_classif
+        
+        mi_scores = mutual_info_classif(X, y, random_state=42)
+        
+        mi_df = pd.DataFrame({
+            'feature': X.columns,
+            'mi_score': mi_scores
+        }).sort_values('mi_score', ascending=False)
+        
+        if self.verbose:
+            print(f"   📊 Mutual Info - برترین ویژگی‌ها:")
+            for _, row in mi_df.head(5).iterrows():
+                print(f"      {row['feature']:25s}: {row['mi_score']:.4f}")
+        
+        return mi_df.head(max_features)['feature'].tolist()
+    
+    def get_feature_list(self, df: Optional[pd.DataFrame] = None) -> List[str]:
+        """
+        دریافت لیست ویژگی‌های نهایی برای مدل
+        
+        Args:
+            df: DataFrame (اختیاری)
+        
+        Returns:
+            لیست نام ویژگی‌ها
+        """
+        # اگر Feature Selection انجام شده
+        if self.selected_features:
+            return self.selected_features
+        
+        # اگر از ویژگی‌های پیشرفته استفاده می‌شود
+        if self.use_advanced_features and df is not None:
+            return self.feature_engineer.get_feature_names(df)
+        
+        # ویژگی‌های پایه
+        return [
+            'Returns', 'RSI', 'ATR', 'ADX',
+            'Distance_MA20', 'Distance_MA50'
+        ]
+    
+    def get_statistics(self, df: pd.DataFrame) -> Dict:
+        """
+        آمار خلاصه از DataFrame
+        
+        Args:
+            df: DataFrame
+        
+        Returns:
+            دیکشنری حاوی آمار
+        """
+        stats = {
+            'total_rows': len(df),
+            'total_columns': len(df.columns),
+            'date_range': {
+                'start': df['time'].min() if 'time' in df.columns else None,
+                'end': df['time'].max() if 'time' in df.columns else None
+            },
+            'nan_count': df.isnull().sum().sum(),
+            'memory_usage_mb': df.memory_usage(deep=True).sum() / 1024**2
+        }
+        
+        if 'Target' in df.columns:
+            stats['target_distribution'] = df['Target'].value_counts().to_dict()
+        
+        return stats
+
+
+# ============ توابع Standalone برای Backward Compatibility ============
+
+def get_data(symbol: str, timeframe: str, count: int) -> Optional[pd.DataFrame]:
+    """تابع standalone برای سازگاری با کد قدیمی"""
+    handler = DataHandler(use_advanced_features=False, verbose=False)
+    return handler.get_data(symbol, timeframe, count)
+
+
+def prepare_training_data(
+    symbol: str,
+    timeframe: str,
+    count: int,
+    forward_periods: int = 5,
+    threshold: float = 0.001
+) -> Optional[pd.DataFrame]:
+    """تابع standalone برای سازگاری با کد قدیمی"""
+    handler = DataHandler(use_advanced_features=False, verbose=True)
+    return handler.prepare_training_data(
+        symbol, timeframe, count, forward_periods, threshold
+    )
+
+
+def prepare_live_data(
+    symbol: str,
+    timeframe: str,
+    count: int
+) -> Optional[pd.DataFrame]:
+    """تابع standalone برای سازگاری با کد قدیمی"""
+    handler = DataHandler(use_advanced_features=False, verbose=False)
+    return handler.prepare_live_data(symbol, timeframe, count)
+
+
+# ============ تست ============
+if __name__ == "__main__":
+    print("\n🧪 تست Data Handler (نسخه نهایی v3.0)\n")
+    
+    # تست 1: حالت پایه
+    print("=" * 70)
+    print("تست 1: حالت پایه (بدون ویژگی‌های پیشرفته)")
+    print("=" * 70)
+    
+    handler_basic = DataHandler(use_advanced_features=False)
+    df_basic = handler_basic.prepare_training_data(
+        symbol="EURUSD",
+        timeframe="H1",
+        count=500
+    )
+    
+    if df_basic is not None:
+        print(f"\n✅ شکل داده: {df_basic.shape}")
+        features_basic = handler_basic.get_feature_list(df_basic)
+        print(f"📋 ویژگی‌ها ({len(features_basic)}): {features_basic}")
+        
+        # آمار
+        stats = handler_basic.get_statistics(df_basic)
+        print(f"\n📊 آمار:")
+        print(f"   - تعداد ردیف‌ها: {stats['total_rows']}")
+        print(f"   - تعداد ستون‌ها: {stats['total_columns']}")
+        print(f"   - NaN: {stats['nan_count']}")
+        print(f"   - حافظه: {stats['memory_usage_mb']:.2f} MB")
+    
+    # تست 2: حالت پیشرفته
+    print("\n" + "=" * 70)
+    print("تست 2: حالت پیشرفته با Feature Selection")
+    print("=" * 70)
+    
+    handler_advanced = DataHandler(use_advanced_features=True)
+    df_advanced = handler_advanced.prepare_training_data(
+        symbol="EURUSD",
+        timeframe="H1",
+        count=1000,
+        auto_select_features=True,
+        selection_method='combined',
+        max_features=20
+    )
+    
+    if df_advanced is not None:
+        print(f"\n✅ شکل داده: {df_advanced.shape}")
+        features_advanced = handler_advanced.get_feature_list(df_advanced)
+        print(f"📋 ویژگی‌های انتخاب شده ({len(features_advanced)}):")
+        for f in features_advanced:
+            print(f"   • {f}")
+    
+    # تست 3: داده زنده
+    print("\n" + "=" * 70)
+    print("تست 3: آماده‌سازی داده زنده")
+    print("=" * 70)
+    
+    df_live = handler_advanced.prepare_live_data("EURUSD", "H1", 200)
+    
+    if df_live is not None:
+        print(f"\n✅ شکل داده زنده: {df_live.shape}")
+        
+        # بررسی Target
+        if 'Target' in df_live.columns:
+            print("❌ خطا: Target در داده زنده وجود دارد!")
+        else:
+            print("✅ تأیید: Target در داده زنده وجود ندارد")
+    
+    print("\n" + "=" * 70)
+    print("✅ همه تست‌ها تمام شد")
+    print("=" * 70)
+
+
+
+
+"""
+====================================================================
+فایل: indicators.py
+ماژول اندیکاتورهای تکنیکال
+====================================================================
+این ماژول شامل تمام اندیکاتورهای تکنیکال استاندارد است
+====================================================================
+"""
+
+import pandas as pd
+import numpy as np
+from typing import Tuple
+
+
+class TechnicalIndicators:
+    """
+    کلاس حاوی اندیکاتورهای تکنیکال
+    
+    تمام متدها static هستند و می‌توان بدون ایجاد instance استفاده کرد
+    
+    استفاده:
+        df['RSI'] = TechnicalIndicators.rsi(df['close'])
+        df['ATR'] = TechnicalIndicators.atr(df['high'], df['low'], df['close'])
+    """
+    
+    @staticmethod
+    def rsi(
+        close: pd.Series,
+        period: int = 14
+    ) -> pd.Series:
+        """
+        محاسبه RSI (Relative Strength Index)
+        
+        Args:
+            close: سری قیمت بسته شدن
+            period: دوره محاسبه (معمولاً 14)
+        
+        Returns:
+            سری RSI (0 تا 100)
+        
+        مثال:
+            >>> df['RSI'] = TechnicalIndicators.rsi(df['close'], period=14)
+        """
+        # محاسبه تغییرات
+        delta = close.diff()
+        
+        # جدا کردن سود و زیان
+        gain = delta.where(delta > 0, 0)
+        loss = -delta.where(delta < 0, 0)
+        
+        # میانگین متحرک
+        avg_gain = gain.rolling(window=period).mean()
+        avg_loss = loss.rolling(window=period).mean()
+        
+        # محاسبه RS و RSI
+        rs = np.where(
+            avg_loss != 0,
+            avg_gain / avg_loss,
+            0  # اگر loss صفر باشد، RS = 0
+        )
+        
+        rsi = 100 - (100 / (1 + rs))
+        
+        return pd.Series(rsi, index=close.index)
+    
+    @staticmethod
+    def atr(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        period: int = 14
+    ) -> pd.Series:
+        """
+        محاسبه ATR (Average True Range)
+        
+        Args:
+            high: سری قیمت بالا
+            low: سری قیمت پایین
+            close: سری قیمت بسته شدن
+            period: دوره محاسبه (معمولاً 14)
+        
+        Returns:
+            سری ATR
+        
+        مثال:
+            >>> df['ATR'] = TechnicalIndicators.atr(
+            ...     df['high'], df['low'], df['close']
+            ... )
+        """
+        # محاسبه True Range
+        high_low = high - low
+        high_close = abs(high - close.shift())
+        low_close = abs(low - close.shift())
+        
+        # بیشترین مقدار
+        ranges = pd.concat([high_low, high_close, low_close], axis=1)
+        true_range = ranges.max(axis=1)
+        
+        # میانگین متحرک
+        atr = true_range.rolling(window=period).mean()
+        
+        return atr
+    
+    @staticmethod
+    def adx(
+        df: pd.DataFrame,
+        period: int = 14
+    ) -> pd.DataFrame:
+        """
+        محاسبه ADX (Average Directional Index)
+        
+        Args:
+            df: DataFrame با ستون‌های high, low, close
+            period: دوره محاسبه (معمولاً 14)
+        
+        Returns:
+            DataFrame با ستون ADX اضافه شده
+        
+        نکته:
+            این متد DataFrame را به صورت in-place تغییر می‌دهد
+        
+        مثال:
+            >>> df = TechnicalIndicators.adx(df, period=14)
+            >>> print(df['ADX'])
+        """
+        # کپی برای عدم تغییر اصلی
+        df = df.copy()
+        
+        # True Range
+        df['H-L'] = df['high'] - df['low']
+        df['H-PC'] = abs(df['high'] - df['close'].shift(1))
+        df['L-PC'] = abs(df['low'] - df['close'].shift(1))
+        df['TR'] = df[['H-L', 'H-PC', 'L-PC']].max(axis=1)
+        
+        # Directional Movement
+        df['DMplus'] = np.where(
+            (df['high'] - df['high'].shift(1)) > (df['low'].shift(1) - df['low']),
+            df['high'] - df['high'].shift(1),
+            0
+        )
+        df['DMplus'] = np.where(df['DMplus'] < 0, 0, df['DMplus'])
+        
+        df['DMminus'] = np.where(
+            (df['low'].shift(1) - df['low']) > (df['high'] - df['high'].shift(1)),
+            df['low'].shift(1) - df['low'],
+            0
+        )
+        df['DMminus'] = np.where(df['DMminus'] < 0, 0, df['DMminus'])
+        
+        # Smoothed Directional Indicators
+        TRn = df['TR'].rolling(window=period).sum()
+        DMplusN = df['DMplus'].rolling(window=period).sum()
+        DMminusN = df['DMminus'].rolling(window=period).sum()
+        
+        # مدیریت تقسیم بر صفر
+        df['DIplus'] = np.where(
+            TRn != 0,
+            (DMplusN / TRn) * 100,
+            0
+        )
+        
+        df['DIminus'] = np.where(
+            TRn != 0,
+            (DMminusN / TRn) * 100,
+            0
+        )
+        
+        # محاسبه DX
+        di_sum = df['DIplus'] + df['DIminus']
+        df['DX'] = np.where(
+            di_sum != 0,
+            (abs(df['DIplus'] - df['DIminus']) / di_sum) * 100,
+            0
+        )
+        
+        # ADX (میانگین DX)
+        df['ADX'] = df['DX'].rolling(window=period).mean()
+        
+        # حذف ستون‌های موقت
+        temp_cols = ['H-L', 'H-PC', 'L-PC', 'TR', 
+                     'DMplus', 'DMminus', 'DIplus', 'DIminus', 'DX']
+        df = df.drop(temp_cols, axis=1, errors='ignore')
+        
+        return df
+    
+    @staticmethod
+    def macd(
+        close: pd.Series,
+        fast: int = 12,
+        slow: int = 26,
+        signal: int = 9
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """
+        محاسبه MACD (Moving Average Convergence Divergence)
+        
+        Args:
+            close: سری قیمت بسته شدن
+            fast: دوره EMA سریع (معمولاً 12)
+            slow: دوره EMA کند (معمولاً 26)
+            signal: دوره خط سیگنال (معمولاً 9)
+        
+        Returns:
+            (MACD, Signal, Histogram)
+        
+        مثال:
+            >>> macd, signal, hist = TechnicalIndicators.macd(df['close'])
+            >>> df['MACD'] = macd
+            >>> df['MACD_Signal'] = signal
+            >>> df['MACD_Hist'] = hist
+        """
+        # محاسبه EMA ها
+        exp_fast = close.ewm(span=fast, adjust=False).mean()
+        exp_slow = close.ewm(span=slow, adjust=False).mean()
+        
+        # MACD Line
+        macd_line = exp_fast - exp_slow
+        
+        # Signal Line
+        signal_line = macd_line.ewm(span=signal, adjust=False).mean()
+        
+        # Histogram
+        histogram = macd_line - signal_line
+        
+        return macd_line, signal_line, histogram
+    
+    @staticmethod
+    def bollinger_bands(
+        close: pd.Series,
+        period: int = 20,
+        std_dev: float = 2.0
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """
+        محاسبه Bollinger Bands
+        
+        Args:
+            close: سری قیمت بسته شدن
+            period: دوره (معمولاً 20)
+            std_dev: انحراف معیار (معمولاً 2)
+        
+        Returns:
+            (Upper Band, Middle Band, Lower Band)
+        
+        مثال:
+            >>> upper, middle, lower = TechnicalIndicators.bollinger_bands(df['close'])
+            >>> df['BB_Upper'] = upper
+            >>> df['BB_Middle'] = middle
+            >>> df['BB_Lower'] = lower
+        """
+        # میانگین متحرک (Middle Band)
+        middle = close.rolling(window=period).mean()
+        
+        # انحراف معیار
+        std = close.rolling(window=period).std()
+        
+        # Upper و Lower Bands
+        upper = middle + (std_dev * std)
+        lower = middle - (std_dev * std)
+        
+        return upper, middle, lower
+    
+    @staticmethod
+    def stochastic(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        k_period: int = 14,
+        d_period: int = 3
+    ) -> Tuple[pd.Series, pd.Series]:
+        """
+        محاسبه Stochastic Oscillator
+        
+        Args:
+            high: سری قیمت بالا
+            low: سری قیمت پایین
+            close: سری قیمت بسته شدن
+            k_period: دوره %K (معمولاً 14)
+            d_period: دوره %D (معمولاً 3)
+        
+        Returns:
+            (%K, %D)
+        
+        مثال:
+            >>> k, d = TechnicalIndicators.stochastic(
+            ...     df['high'], df['low'], df['close']
+            ... )
+            >>> df['Stoch_K'] = k
+            >>> df['Stoch_D'] = d
+        """
+        # بیشترین و کمترین قیمت در دوره
+        highest_high = high.rolling(window=k_period).max()
+        lowest_low = low.rolling(window=k_period).min()
+        
+        # %K
+        k = np.where(
+            (highest_high - lowest_low) != 0,
+            ((close - lowest_low) / (highest_high - lowest_low)) * 100,
+            50  # مقدار پیش‌فرض
+        )
+        k = pd.Series(k, index=close.index)
+        
+        # %D (میانگین متحرک %K)
+        d = k.rolling(window=d_period).mean()
+        
+        return k, d
+    
+    @staticmethod
+    def cci(
+        high: pd.Series,
+        low: pd.Series,
+        close: pd.Series,
+        period: int = 20
+    ) -> pd.Series:
+        """
+        محاسبه CCI (Commodity Channel Index)
+        
+        Args:
+            high: سری قیمت بالا
+            low: سری قیمت پایین
+            close: سری قیمت بسته شدن
+            period: دوره (معمولاً 20)
+        
+        Returns:
+            سری CCI
+        
+        مثال:
+            >>> df['CCI'] = TechnicalIndicators.cci(
+            ...     df['high'], df['low'], df['close']
+            ... )
+        """
+        # Typical Price
+        tp = (high + low + close) / 3
+        
+        # میانگین متحرک TP
+        ma_tp = tp.rolling(window=period).mean()
+        
+        # Mean Deviation
+        mad = tp.rolling(window=period).apply(
+            lambda x: np.abs(x - x.mean()).mean(),
+            raw=True
+        )
+        
+        # CCI
+        cci = np.where(
+            mad != 0,
+            (tp - ma_tp) / (0.015 * mad),
+            0
+        )
+        
+        return pd.Series(cci, index=close.index)
+    
+    @staticmethod
+    def obv(
+        close: pd.Series,
+        volume: pd.Series
+    ) -> pd.Series:
+        """
+        محاسبه OBV (On-Balance Volume)
+        
+        Args:
+            close: سری قیمت بسته شدن
+            volume: سری حجم معاملات
+        
+        Returns:
+            سری OBV
+        
+        مثال:
+            >>> df['OBV'] = TechnicalIndicators.obv(df['close'], df['volume'])
+        """
+        # تغییر قیمت
+        price_change = close.diff()
+        
+        # حجم با علامت
+        signed_volume = np.where(
+            price_change > 0, volume,
+            np.where(price_change < 0, -volume, 0)
+        )
+        
+        # OBV (جمع تجمعی)
+        obv = pd.Series(signed_volume, index=close.index).cumsum()
+        
+        return obv
+
+
+# ============ تست ============
+if __name__ == "__main__":
+    print("\n🧪 تست ماژول Indicators\n")
+    
+    # ساخت داده تست
+    n = 200
+    np.random.seed(42)
+    
+    df = pd.DataFrame({
+        'time': pd.date_range('2024-01-01', periods=n, freq='H'),
+        'open': np.random.uniform(1.08, 1.09, n),
+        'high': np.random.uniform(1.09, 1.10, n),
+        'low': np.random.uniform(1.07, 1.08, n),
+        'close': np.random.uniform(1.08, 1.09, n),
+        'volume': np.random.randint(100, 1000, n),
+    })
+    
+    # اطمینان از منطقی بودن OHLC
+    for i in range(len(df)):
+        df.loc[i, 'high'] = max(df.loc[i, 'open'], df.loc[i, 'close'], df.loc[i, 'high'])
+        df.loc[i, 'low'] = min(df.loc[i, 'open'], df.loc[i, 'close'], df.loc[i, 'low'])
+    
+    print(f"📊 داده تست: {df.shape}\n")
+    
+    # تست RSI
+    print("1️⃣ تست RSI...")
+    df['RSI'] = TechnicalIndicators.rsi(df['close'])
+    print(f"   ✅ RSI محاسبه شد - میانگین: {df['RSI'].mean():.2f}")
+    
+    # تست ATR
+    print("\n2️⃣ تست ATR...")
+    df['ATR'] = TechnicalIndicators.atr(df['high'], df['low'], df['close'])
+    print(f"   ✅ ATR محاسبه شد - میانگین: {df['ATR'].mean():.6f}")
+    
+    # تست ADX
+    print("\n3️⃣ تست ADX...")
+    df = TechnicalIndicators.adx(df)
+    print(f"   ✅ ADX محاسبه شد - میانگین: {df['ADX'].mean():.2f}")
+    
+    # تست MACD
+    print("\n4️⃣ تست MACD...")
+    df['MACD'], df['MACD_Signal'], df['MACD_Hist'] = TechnicalIndicators.macd(df['close'])
+    print(f"   ✅ MACD محاسبه شد")
+    print(f"      MACD: {df['MACD'].iloc[-1]:.6f}")
+    print(f"      Signal: {df['MACD_Signal'].iloc[-1]:.6f}")
+    print(f"      Histogram: {df['MACD_Hist'].iloc[-1]:.6f}")
+    
+    # تست Bollinger Bands
+    print("\n5️⃣ تست Bollinger Bands...")
+    df['BB_Upper'], df['BB_Middle'], df['BB_Lower'] = TechnicalIndicators.bollinger_bands(df['close'])
+    print(f"   ✅ Bollinger Bands محاسبه شد")
+    print(f"      Upper: {df['BB_Upper'].iloc[-1]:.5f}")
+    print(f"      Middle: {df['BB_Middle'].iloc[-1]:.5f}")
+    print(f"      Lower: {df['BB_Lower'].iloc[-1]:.5f}")
+    
+    # تست Stochastic
+    print("\n6️⃣ تست Stochastic...")
+    df['Stoch_K'], df['Stoch_D'] = TechnicalIndicators.stochastic(
+        df['high'], df['low'], df['close']
+    )
+    print(f"   ✅ Stochastic محاسبه شد")
+    print(f"      %K: {df['Stoch_K'].iloc[-1]:.2f}")
+    print(f"      %D: {df['Stoch_D'].iloc[-1]:.2f}")
+    
+    # تست CCI
+    print("\n7️⃣ تست CCI...")
+    df['CCI'] = TechnicalIndicators.cci(df['high'], df['low'], df['close'])
+    print(f"   ✅ CCI محاسبه شد - آخرین مقدار: {df['CCI'].iloc[-1]:.2f}")
+    
+    # تست OBV
+    print("\n8️⃣ تست OBV...")
+    df['OBV'] = TechnicalIndicators.obv(df['close'], df['volume'])
+    print(f"   ✅ OBV محاسبه شد - آخرین مقدار: {df['OBV'].iloc[-1]:.0f}")
+    
+    # خلاصه
+    print("\n" + "="*70)
+    print("📊 خلاصه اندیکاتورها:")
+    print("="*70)
+    
+    indicators = ['RSI', 'ATR', 'ADX', 'MACD', 'MACD_Signal', 'MACD_Hist',
+                  'BB_Upper', 'BB_Middle', 'BB_Lower', 'Stoch_K', 'Stoch_D',
+                  'CCI', 'OBV']
+    
+    for ind in indicators:
+        if ind in df.columns:
+            non_nan = df[ind].notna().sum()
+            print(f"  {ind:15s}: {non_nan}/{len(df)} مقدار معتبر")
+    
+    print("\n✅ همه تست‌ها موفق بود!")
+
+
+

@@ -1,0 +1,1196 @@
+"""
+====================================================================
+فایل: explainable_logger.py
+سیستم لاگ حرفه‌ای با قابلیت توضیح تصمیمات
+====================================================================
+ویژگی‌ها:
+    ✅ لاگ به فایل، کنسول، و دیتابیس
+    ✅ سطوح مختلف (INFO, WARNING, ERROR)
+    ✅ لاگ تصمیمات ML (چرا خرید/فروش)
+    ✅ لاگ وضعیت بازار
+    ✅ Thread-Safe
+    ✅ rotation خودکار فایل لاگ
+====================================================================
+"""
+
+import logging
+import json
+import sqlite3
+import os
+import threading
+from datetime import datetime
+from typing import Optional, Dict, List, Any
+from logging.handlers import RotatingFileHandler
+from config import Config
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🏗️ سیستم لاگ پایه
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+class ExplainableLogger:
+    """
+    سیستم لاگ حرفه‌ای
+    
+    استفاده:
+        logger = ExplainableLogger()
+        logger.log_info("TRADE", "پوزیشن باز شد")
+        logger.log_ml_decision(prediction=0.72, confidence=0.8, direction="BUY")
+    """
+    
+    # فقط یک نسخه از logger وجود داشته باشد (Singleton)
+    _instance = None
+    _lock = threading.Lock()
+    
+    def __new__(cls, *args, **kwargs):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+                cls._instance._initialized = False
+            return cls._instance
+    
+    def __init__(
+        self,
+        log_to_console: bool = True,
+        log_to_file: bool = True,
+        log_to_db: bool = True,
+    ):
+        # فقط یکبار init شود
+        if self._initialized:
+            return
+        self._initialized = True
+        
+        self._lock_io = threading.Lock()
+        
+        # تنظیمات
+        self.log_to_console = log_to_console
+        self.log_to_file    = log_to_file and getattr(Config, "LOG_TO_FILE", True)
+        self.log_to_db      = log_to_db    and getattr(Config, "LOG_TO_DB", True)
+        
+        # مسیرها
+        self.log_file = getattr(Config, "LOG_FILE_PATH", "data/logs/bot.log")
+        self.db_path  = getattr(Config, "LOG_DB_PATH", "data/logs/bot_logs.db")
+        
+        # پوشه‌ها
+        os.makedirs(os.path.dirname(self.log_file), exist_ok=True)
+        os.makedirs(os.path.dirname(self.db_path),  exist_ok=True)
+        
+        # ساخت logger پایه
+        self._setup_logger()
+        
+        # ساخت دیتابیس
+        if self.log_to_db:
+            self._setup_database()
+        
+        print("📝 ExplainableLogger فعال شد")
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🔧 setup
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def _setup_logger(self):
+        """ساخت logger با فرمت حرفه‌ای"""
+        self.logger = logging.getLogger("TradingBot")
+        self.logger.setLevel(logging.DEBUG)
+        
+        # فرمت لاگ
+        fmt = logging.Formatter(
+            "[%(asctime)s] [%(levelname)-8s] %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+        
+        # کنسول
+        if self.log_to_console:
+            console = logging.StreamHandler()
+            console.setLevel(logging.INFO)
+            console.setFormatter(fmt)
+            self.logger.addHandler(console)
+        
+        # فایل (با rotation)
+        if self.log_to_file:
+            file_handler = RotatingFileHandler(
+                self.log_file,
+                maxBytes=5 * 1024 * 1024,  # 5 MB
+                backupCount=5,
+                encoding="utf-8",
+            )
+            file_handler.setLevel(logging.DEBUG)
+            file_handler.setFormatter(fmt)
+            self.logger.addHandler(file_handler)
+    
+    def _setup_database(self):
+        """ساخت دیتابیس SQLite"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            c = conn.cursor()
+            
+            # جدول لاگ عمومی
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS logs (
+                    id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT    NOT NULL,
+                    level     TEXT    NOT NULL,
+                    category  TEXT    NOT NULL,
+                    message   TEXT    NOT NULL,
+                    details   TEXT
+                )
+            """)
+            
+            # جدول تصمیمات ML
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS ml_decisions (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp   TEXT    NOT NULL,
+                    prediction  REAL,
+                    confidence  REAL,
+                    direction   TEXT,
+                    reasoning   TEXT,
+                    signal_strength TEXT
+                )
+            """)
+            
+            # جدول وضعیت بازار
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS market_snapshots (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp    TEXT    NOT NULL,
+                    price        REAL,
+                    atr          REAL,
+                    adx          REAL,
+                    rsi          REAL,
+                    market_state TEXT
+                )
+            """)
+            
+            # جدول معاملات
+            c.execute("""
+                CREATE TABLE IF NOT EXISTS trades (
+                    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp  TEXT    NOT NULL,
+                    action     TEXT    NOT NULL,
+                    symbol     TEXT,
+                    price      REAL,
+                    volume     REAL,
+                    sl         REAL,
+                    tp         REAL,
+                    profit     REAL,
+                    reason     TEXT
+                )
+            """)
+            
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"⚠️ خطا در ساخت دیتابیس لاگ: {e}")
+            self.log_to_db = False
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📝 لاگ پایه
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def log_info(self, category: str, message: str, details: Optional[Dict] = None):
+        """لاگ سطح INFO"""
+        self.logger.info(f"[{category}] {message}")
+        if self.log_to_db:
+            self._save_to_db("INFO", category, message, details)
+    
+    def log_warning(self, category: str, message: str, details: Optional[Dict] = None):
+        """لاگ سطح WARNING"""
+        self.logger.warning(f"[{category}] {message}")
+        if self.log_to_db:
+            self._save_to_db("WARNING", category, message, details)
+    
+    def log_error(self, category: str, message: str, details: Optional[Dict] = None):
+        """لاگ سطح ERROR"""
+        self.logger.error(f"[{category}] {message}")
+        if self.log_to_db:
+            self._save_to_db("ERROR", category, message, details)
+    
+    def _save_to_db(self, level: str, category: str, message: str, details: Optional[Dict] = None):
+        """ذخیره لاگ در دیتابیس"""
+        with self._lock_io:
+            try:
+                conn = sqlite3.connect(self.db_path)
+                conn.execute(
+                    "INSERT INTO logs (timestamp, level, category, message, details) VALUES (?,?,?,?,?)",
+                    (
+                        datetime.now().isoformat(),
+                        level,
+                        category,
+                        message,
+                        json.dumps(details, ensure_ascii=False) if details else None,
+                    ),
+                )
+                conn.commit()
+                conn.close()
+            except Exception as e:
+                print(f"⚠️ خطا در ذخیره لاگ: {e}")
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🤖 لاگ تصمیمات ML (مهم‌ترین بخش)
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def log_ml_decision(
+        self,
+        prediction: float,
+        confidence: float,
+        direction: str,
+        reasoning: str = "",
+        signal_strength: str = "",
+    ):
+        """
+        لاگ تصمیم مدل ML
+        شامل: پیش‌بینی، اطمینان، جهت، و دلیل
+        """
+        msg = (
+            f"ML تصمیم: pred={prediction:.3f} | "
+            f"conf={confidence:.2f} | dir={direction}"
+        )
+        if signal_strength:
+            msg += f" | signal={signal_strength}"
+        
+        self.logger.info(f"[ML_DECISION] {msg}")
+        
+        if self.log_to_db:
+            with self._lock_io:
+                try:
+                    conn = sqlite3.connect(self.db_path)
+                    conn.execute(
+                        """INSERT INTO ml_decisions
+                           (timestamp, prediction, confidence, direction, reasoning, signal_strength)
+                           VALUES (?,?,?,?,?,?)""",
+                        (
+                            datetime.now().isoformat(),
+                            prediction,
+                            confidence,
+                            direction,
+                            reasoning,
+                            signal_strength,
+                        ),
+                    )
+                    conn.commit()
+                    conn.close()
+                except Exception as e:
+                    print(f"⚠️ خطا: {e}")
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📊 لاگ بازار
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def log_market_snapshot(
+        self,
+        price: float,
+        atr: float = 0,
+        adx: float = 0,
+        rsi: float = 50,
+        market_state: str = "",
+    ):
+        """لاگ وضعیت بازار"""
+        msg = (
+            f"بازار: price={price:.5f} | "
+            f"ATR={atr:.5f} | ADX={adx:.1f} | RSI={rsi:.1f}"
+        )
+        if market_state:
+            msg += f" | state={market_state}"
+        
+        self.logger.debug(f"[MARKET] {msg}")
+        
+        if self.log_to_db:
+            with self._lock_io:
+                try:
+                    conn = sqlite3.connect(self.db_path)
+                    conn.execute(
+                        """INSERT INTO market_snapshots
+                           (timestamp, price, atr, adx, rsi, market_state)
+                           VALUES (?,?,?,?,?,?)""",
+                        (datetime.now().isoformat(), price, atr, adx, rsi, market_state),
+                    )
+                    conn.commit()
+                    conn.close()
+                except Exception as e:
+                    print(f"⚠️ خطا: {e}")
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 💰 لاگ معاملات
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def log_trade(
+        self,
+        action: str,           # OPEN / CLOSE / PARTIAL
+        symbol: str,
+        price: float,
+        volume: float = 0,
+        sl: float = 0,
+        tp: float = 0,
+        profit: float = 0,
+        reason: str = "",
+    ):
+        """لاگ معامله"""
+        emoji = {"OPEN": "🟢", "CLOSE": "🔴", "PARTIAL": "🟡"}.get(action, "⚪")
+        msg = f"{emoji} {action} {symbol} @ {price:.5f} | vol={volume}"
+        if action == "OPEN":
+            msg += f" | SL={sl:.5f} TP={tp:.5f}"
+        if action in ("CLOSE", "PARTIAL"):
+            msg += f" | P/L=${profit:.2f}"
+        if reason:
+            msg += f" | reason={reason}"
+        
+        self.logger.info(f"[TRADE] {msg}")
+        
+        if self.log_to_db:
+            with self._lock_io:
+                try:
+                    conn = sqlite3.connect(self.db_path)
+                    conn.execute(
+                        """INSERT INTO trades
+                           (timestamp, action, symbol, price, volume, sl, tp, profit, reason)
+                           VALUES (?,?,?,?,?,?,?,?,?)""",
+                        (
+                            datetime.now().isoformat(),
+                            action, symbol, price, volume, sl, tp, profit, reason,
+                        ),
+                    )
+                    conn.commit()
+                    conn.close()
+                except Exception as e:
+                    print(f"⚠️ خطا: {e}")
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🚫 لاگ دلایل عدم معامله
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def log_why_not_trade(self, reasons: List[str], details: Optional[Any] = None):
+        """لاگ دلایل عدم معامله"""
+        msg = "🚫 معامله انجام نشد: " + " | ".join(reasons)
+        self.logger.info(f"[NO_TRADE] {msg}")
+        if self.log_to_db:
+            self._save_to_db("INFO", "NO_TRADE", msg, {"details": str(details)} if details else None)
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🧪 تست
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+if __name__ == "__main__":
+    print("\n" + "=" * 70)
+    print("🧪 تست ExplainableLogger")
+    print("=" * 70)
+    
+    logger = ExplainableLogger(log_to_console=True, log_to_file=True, log_to_db=True)
+    
+    # تست لاگ عمومی
+    print("\n1️⃣ تست لاگ عمومی:")
+    logger.log_info("TEST", "این یک تست اطلاعات است")
+    logger.log_warning("TEST", "این یک تست هشدار است")
+    logger.log_error("TEST", "این یک تست خطا است")
+    
+    # تست لاگ ML
+    print("\n2️⃣ تست لاگ تصمیم ML:")
+    logger.log_ml_decision(
+        prediction=0.72,
+        confidence=0.85,
+        direction="BUY",
+        reasoning="LSTM=0.70, XGB=0.75, RF=0.71",
+        signal_strength="STRONG_BUY",
+    )
+    
+    # تست لاگ بازار
+    print("\n3️⃣ تست لاگ بازار:")
+    logger.log_market_snapshot(
+        price=1.0850, atr=0.0015, adx=35, rsi=62, market_state="روند قوی"
+    )
+    
+    # تست لاگ معامله
+    print("\n4️⃣ تست لاگ معامله:")
+    logger.log_trade("OPEN",  "EURUSD", 1.0850, volume=0.1, sl=1.0830, tp=1.0890)
+    logger.log_trade("CLOSE", "EURUSD", 1.0888, profit=38.0, reason="TP hit")
+    
+    # تست لاگ عدم معامله
+    print("\n5️⃣ تست لاگ عدم معامله:")
+    logger.log_why_not_trade(["اسپرد بالا", "خبر مهم در پیش"])
+    
+    # Singleton تست
+    print("\n6️⃣ تست Singleton:")
+    logger2 = ExplainableLogger()
+    print(f"   یک نسخه هستند؟ {logger is logger2}")
+    
+    print("\n" + "=" * 70)
+    print("✅ تست کامل موفق بود!")
+    print("=" * 70)
+
+
+
+
+"""
+====================================================================
+فایل: run_bot_explained.py
+ربات با سیستم لاگینگ آموزشی کامل
+====================================================================
+"""
+
+import MetaTrader5 as mt5
+import time
+from datetime import datetime
+
+from config import Config
+from data_handler import prepare_live_data
+from ml_model import TradingModel
+from risk_manager import RiskManager
+from explainable_logger import ExplainableLogger
+
+
+class ExplainableBot:
+    """ربات با قابلیت توضیح تصمیمات"""
+    
+    def __init__(self):
+        self.model = TradingModel()
+        self.risk = RiskManager()
+        self.logger = ExplainableLogger(
+            log_to_file=True,
+            log_to_db=True,
+            log_to_console=True
+        )
+        
+        self.running = False
+        self.cycle_count = 0
+        
+        print("\n" + "="*70)
+        print("🤖 ربات آموزشی (Explainable Bot)")
+        print("="*70)
+    
+    def initialize(self):
+        """راه‌اندازی ربات"""
+        print("\n📥 بارگذاری مدل...")
+        
+        try:
+            self.model.load()
+            print("✅ مدل بارگذاری شد")
+            
+            # نمایش اطلاعات مدل
+            if hasattr(self.model, 'training_history'):
+                history = self.model.training_history
+                if 'avg_accuracy' in history:
+                    print(f"   📊 Accuracy: {history['avg_accuracy']*100:.2f}%")
+        
+        except Exception as e:
+            self.logger.log_error(
+                "MODEL_LOAD",
+                "نمی‌توان مدل را بارگذاری کرد",
+                "ابتدا train.py را اجرا کنید"
+            )
+            return False
+        
+        # تست اتصال MT5
+        print("\n🔌 بررسی اتصال MT5...")
+        if not mt5.initialize():
+            self.logger.log_error(
+                "MT5_CONNECTION",
+                "نمی‌توان به MT5 متصل شد",
+                "MT5 را به عنوان Administrator اجرا کنید"
+            )
+            return False
+        
+        mt5.shutdown()
+        print("✅ اتصال MT5 برقرار است")
+        
+        return True
+    
+    def get_signal_with_explanation(self):
+        """
+        دریافت سیگنال با توضیحات کامل
+        
+        Returns:
+            (signal_dict, explanation_dict)
+        """
+        # دریافت داده
+        df = prepare_live_data(Config.SYMBOL, Config.TIMEFRAME_PRIMARY, 200)
+        
+        if df is None or len(df) < Config.LOOKBACK_PERIOD:
+            self.logger.log_error(
+                "DATA_ERROR",
+                "داده کافی دریافت نشد",
+                "بررسی کنید MT5 و اینترنت متصل باشند"
+            )
+            return None, None
+        
+        # آخرین مقادیر
+        last_row = df.iloc[-1]
+        current_price = last_row['close']
+        current_atr = last_row['ATR']
+        current_adx = last_row['ADX']
+        current_rsi = last_row['RSI']
+        avg_atr = df['ATR'].iloc[-20:].mean()
+        
+        # 1️⃣ لاگ وضعیت بازار
+        market_state = self._determine_market_state(current_adx, current_rsi)
+        
+        self.logger.log_market_snapshot(
+            price=current_price,
+            atr=current_atr,
+            adx=current_adx,
+            rsi=current_rsi,
+            market_state=market_state
+        )
+        
+        # 2️⃣ پیش‌بینی ML
+        features = df[self.model.features].iloc[-Config.LOOKBACK_PERIOD:].values
+        X_scaled = self.model.scaler.transform(features)
+        X = X_scaled.reshape(1, Config.LOOKBACK_PERIOD, -1)
+        prediction = self.model.predict(X)
+        
+        # تعیین جهت و اطمینان
+        if prediction > 0.65:
+            direction = "BUY"
+            confidence = prediction
+            reasoning = "الگوی صعودی قوی شناسایی شد"
+        elif prediction < 0.35:
+            direction = "SELL"
+            confidence = 1 - prediction
+            reasoning = "الگوی نزولی قوی شناسایی شد"
+        else:
+            direction = "NEUTRAL"
+            confidence = 0.5
+            reasoning = "مدل مطمئن نیست - بازار مبهم است"
+        
+        self.logger.log_ml_decision(
+            prediction=prediction,
+            confidence=confidence,
+            direction=direction,
+            reasoning=reasoning
+        )
+        
+        # 3️⃣ بررسی فیلترها
+        if not mt5.initialize():
+            return None, None
+        
+        tick = mt5.symbol_info_tick(Config.SYMBOL)
+        mt5.shutdown()
+        
+        if not tick:
+            return None, None
+        
+        passed, reason, filters = self.risk.check_market_conditions(df, tick)
+        
+        self.logger.log_filters(filters, passed, reason)
+        
+        # 4️⃣ تصمیم نهایی
+        signal = None
+        no_trade_reasons = []
+        
+        # بررسی شرایط
+        if not passed:
+            no_trade_reasons.append(f"فیلتر بازار: {reason}")
+        
+        if current_adx < Config.ADX_THRESHOLD:
+            no_trade_reasons.append(f"ADX پایین است ({current_adx:.1f} < {Config.ADX_THRESHOLD})")
+        
+        can_trade, risk_reason = self.risk.can_trade()
+        if not can_trade:
+            no_trade_reasons.append(f"مدیریت ریسک: {risk_reason}")
+        
+        if direction == "NEUTRAL":
+            no_trade_reasons.append("مدل مطمئن نیست")
+        
+        # اگر دلیلی برای عدم معامله وجود دارد
+        if no_trade_reasons:
+            self.logger.log_why_not_trade(
+                reasons=no_trade_reasons,
+                details={
+                    'prediction': float(prediction),
+                    'adx': float(current_adx),
+                    'rsi': float(current_rsi),
+                    'direction': direction
+                }
+            )
+            return None, None
+        
+        # اگر همه چیز OK باشد
+        if direction in ["BUY", "SELL"]:
+            # محاسبه SL/TP
+            if direction == "BUY" and prediction > Config.BUY_THRESHOLD:
+                entry = tick.ask
+                sl, tp, sl_dist, tp_dist = self.risk.calculate_dynamic_sl_tp(
+                    entry_price=entry,
+                    direction='BUY',
+                    current_atr=current_atr,
+                    avg_atr=avg_atr,
+                    adx=current_adx
+                )
+                
+                volume = self.risk.calculate_volume(entry, sl)
+                
+                signal = {
+                    'direction': 'BUY',
+                    'entry': entry,
+                    'sl': sl,
+                    'tp': tp,
+                    'volume': volume,
+                    'risk_reward': tp_dist / sl_dist,
+                    'reason': f"ML:{prediction:.3f} ADX:{current_adx:.1f}"
+                }
+            
+            elif direction == "SELL" and prediction < Config.SELL_THRESHOLD:
+                entry = tick.bid
+                sl, tp, sl_dist, tp_dist = self.risk.calculate_dynamic_sl_tp(
+                    entry_price=entry,
+                    direction='SELL',
+                    current_atr=current_atr,
+                    avg_atr=avg_atr,
+                    adx=current_adx
+                )
+                
+                volume = self.risk.calculate_volume(entry, sl)
+                
+                signal = {
+                    'direction': 'SELL',
+                    'entry': entry,
+                    'sl': sl,
+                    'tp': tp,
+                    'volume': volume,
+                    'risk_reward': tp_dist / sl_dist,
+                    'reason': f"ML:{prediction:.3f} ADX:{current_adx:.1f}"
+                }
+        
+        return signal, {
+            'prediction': prediction,
+            'adx': current_adx,
+            'rsi': current_rsi,
+            'atr': current_atr
+        }
+    
+    def _determine_market_state(self, adx: float, rsi: float) -> str:
+        """تعیین وضعیت کلی بازار"""
+        
+        # روند
+        if adx > 40:
+            trend = "روند قوی"
+        elif adx > 25:
+            trend = "روند متوسط"
+        else:
+            trend = "رنج"
+        
+        # جهت
+        if rsi > 60:
+            direction = "صعودی"
+        elif rsi < 40:
+            direction = "نزولی"
+        else:
+            direction = "خنثی"
+        
+        return f"{trend} - {direction}"
+    
+    def execute_trade(self, signal: dict):
+        """اجرای معامله با لاگ کامل"""
+        
+        if not mt5.initialize():
+            self.logger.log_error(
+                "MT5_CONNECTION",
+                "نمی‌توان معامله را باز کرد",
+                "اتصال MT5 قطع شده است"
+            )
+            return False
+        
+        order_type = mt5.ORDER_TYPE_BUY if signal['direction'] == 'BUY' else mt5.ORDER_TYPE_SELL
+        
+        request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": Config.SYMBOL,
+            "volume": signal['volume'],
+            "type": order_type,
+            "price": signal['entry'],
+            "sl": signal['sl'],
+            "tp": signal['tp'],
+            "deviation": 20,
+            "magic": 123456,
+            "comment": "Explained_Bot",
+            "type_filling": mt5.ORDER_FILLING_IOC,
+        }
+        
+        result = mt5.order_send(request)
+        mt5.shutdown()
+        
+        if result.retcode == mt5.TRADE_RETCODE_DONE:
+            self.logger.log_trade_open(
+                direction=signal['direction'],
+                price=signal['entry'],
+                volume=signal['volume'],
+                sl=signal['sl'],
+                tp=signal['tp'],
+                reason=signal['reason'],
+                risk_reward=signal['risk_reward']
+            )
+            return True
+        else:
+            self.logger.log_error(
+                "TRADE_EXECUTION",
+                f"خطا در باز کردن معامله: {result.comment}",
+                "بررسی کنید که حساب Demo باشد و مارجین کافی دارید"
+            )
+            return False
+    
+    def check_positions(self):
+        """بررسی و مدیریت پوزیشن‌های باز"""
+        
+        if not mt5.initialize():
+            return
+        
+        positions = mt5.positions_get(symbol=Config.SYMBOL)
+        
+        if not positions:
+            mt5.shutdown()
+            return
+        
+        for pos in positions:
+            # محاسبه سود فعلی
+            tick = mt5.symbol_info_tick(Config.SYMBOL)
+            if not tick:
+                continue
+            
+            if pos.type == mt5.POSITION_TYPE_BUY:
+                current_profit = (tick.bid - pos.price_open) * pos.volume * 100000
+            else:
+                current_profit = (pos.price_open - tick.ask) * pos.volume * 100000
+            
+            # شبیه‌سازی مدیریت (در نسخه واقعی باید کامل پیاده شود)
+            # این فقط برای نمایش لاگ است
+            
+            # مثال: اگر سود بیش از 50$ باشد
+            if current_profit > 50 and not hasattr(pos, '_partial_logged'):
+                self.logger.log_position_management(
+                    ticket=pos.ticket,
+                    action="PARTIAL_CLOSE",
+                    profit=current_profit,
+                    details="سود به 50$ رسید - 50% بسته می‌شود"
+                )
+                # علامت‌گذاری که لاگ شده (در نسخه واقعی باید در DB ذخیره شود)
+                pos._partial_logged = True
+        
+        mt5.shutdown()
+    
+    def run(self):
+        """حلقه اصلی ربات"""
+        
+        if not self.initialize():
+            print("\n❌ راه‌اندازی ربات با خطا مواجه شد")
+            return
+        
+        print("\n" + "="*70)
+        print("✅ ربات آماده است")
+        print("="*70)
+        print(f"📊 {Config.SYMBOL} | {Config.TIMEFRAME_PRIMARY}")
+        print(f"💰 ریسک: {Config.RISK_PER_TRADE*100}% هر معامله")
+        print(f"📁 لاگ‌ها: logs/")
+        print("="*70)
+        
+        input("\n▶️  Enter را بزنید تا ربات شروع شود...\n")
+        
+        self.running = True
+        
+        print("\n🚀 ربات شروع به کار کرد\n")
+        print("💡 توجه: تمام تصمیمات توضیح داده می‌شوند")
+        print("   برای یادگیری، لاگ‌ها را دنبال کنید!\n")
+        
+        try:
+            while self.running:
+                self.cycle_count += 1
+                
+                print("\n" + "━"*70)
+                print(f"🔄 چرخه #{self.cycle_count} - {datetime.now().strftime('%H:%M:%S')}")
+                print("━"*70)
+                
+                # دریافت سیگنال
+                signal, explanation = self.get_signal_with_explanation()
+                
+                # بررسی پوزیشن‌های باز
+                self.check_positions()
+                
+                # اگر سیگنال دریافت شد
+                if signal:
+                    self.execute_trade(signal)
+                
+                # استراحت
+                print(f"\n⏳ استراحت {30} ثانیه...")
+                time.sleep(30)
+        
+        except KeyboardInterrupt:
+            print("\n\n⏹️  توقف توسط کاربر...")
+            self.logger.log_warning(
+                "USER_STOP",
+                "ربات توسط کاربر متوقف شد"
+            )
+        
+        except Exception as e:
+            print(f"\n\n❌ خطا: {e}")
+            self.logger.log_error(
+                "UNKNOWN_ERROR",
+                str(e),
+                "لطفاً خطا را بررسی کنید"
+            )
+        
+        finally:
+            self.running = False
+            print("\n✅ ربات متوقف شد")
+            print(f"📁 لاگ‌ها در: logs/")
+
+
+# ============ اجرا ============
+if __name__ == "__main__":
+    bot = ExplainableBot()
+    bot.run()
+
+
+
+
+"""
+====================================================================
+فایل: log_viewer.py
+ابزار مشاهده و آنالیز لاگ‌های آموزشی
+====================================================================
+"""
+
+import sqlite3
+import json
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import List, Dict
+from colorama import Fore, Style, init
+
+init(autoreset=True)
+
+
+class LogViewer:
+    """ابزار مشاهده لاگ‌ها"""
+    
+    def __init__(self, db_path: str = 'logs/bot_explain.db'):
+        self.db_path = Path(db_path)
+        
+        if not self.db_path.exists():
+            print(f"❌ فایل دیتابیس یافت نشد: {db_path}")
+            print("   لطفاً ابتدا ربات را اجرا کنید")
+            self.db_exists = False
+        else:
+            self.db_exists = True
+            print(f"✅ متصل به: {db_path}")
+    
+    def get_summary(self):
+        """خلاصه کلی لاگ‌ها"""
+        
+        if not self.db_exists:
+            return
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        print("\n" + "="*70)
+        print("📊 خلاصه لاگ‌های ربات")
+        print("="*70)
+        
+        # تعداد هر نوع لاگ
+        cursor.execute("SELECT log_type, COUNT(*) FROM logs GROUP BY log_type")
+        log_counts = cursor.fetchall()
+        
+        print("\n📋 تعداد لاگ‌ها:")
+        for log_type, count in log_counts:
+            print(f"   {log_type:20s}: {count:>5}")
+        
+        # تعداد تصمیمات
+        cursor.execute("SELECT decision, COUNT(*) FROM decisions GROUP BY decision")
+        decisions = cursor.fetchall()
+        
+        print("\n🎯 تصمیمات:")
+        for decision, count in decisions:
+            emoji = "✅" if decision == "ALLOWED" else "❌"
+            print(f"   {emoji} {decision:20s}: {count:>5}")
+        
+        # تعداد معاملات
+        cursor.execute("SELECT action, COUNT(*) FROM trades GROUP BY action")
+        trades = cursor.fetchall()
+        
+        if trades:
+            print("\n💰 معاملات:")
+            for action, count in trades:
+                print(f"   {action:20s}: {count:>5}")
+        
+        # آخرین فعالیت
+        cursor.execute("SELECT timestamp FROM logs ORDER BY timestamp DESC LIMIT 1")
+        last = cursor.fetchone()
+        
+        if last:
+            last_time = datetime.fromisoformat(last[0])
+            print(f"\n⏰ آخرین فعالیت: {last_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        conn.close()
+        print("="*70)
+    
+    def get_recent_decisions(self, limit: int = 10):
+        """آخرین تصمیمات"""
+        
+        if not self.db_exists:
+            return
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT timestamp, decision, reason, ml_prediction, adx, rsi
+            FROM decisions
+            ORDER BY timestamp DESC
+            LIMIT ?
+        ''', (limit,))
+        
+        decisions = cursor.fetchall()
+        
+        print("\n" + "="*70)
+        print(f"🎯 آخرین {limit} تصمیم")
+        print("="*70)
+        
+        for row in decisions:
+            timestamp, decision, reason, pred, adx, rsi = row
+            
+            time_str = datetime.fromisoformat(timestamp).strftime('%H:%M:%S')
+            
+            if decision == "ALLOWED":
+                emoji = "✅"
+                color = Fore.GREEN
+            else:
+                emoji = "❌"
+                color = Fore.RED
+            
+            print(f"\n{color}[{time_str}] {emoji} {decision}{Style.RESET_ALL}")
+            print(f"  دلیل: {reason}")
+            if pred:
+                print(f"  ML: {pred:.3f} | ADX: {adx:.1f} | RSI: {rsi:.1f}")
+        
+        conn.close()
+    
+    def get_no_trade_reasons(self, limit: int = 10):
+        """
+        دلایل عدم معامله
+        مهم‌ترین بخش برای یادگیری!
+        """
+        
+        if not self.db_exists:
+            return
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT timestamp, message, data
+            FROM logs
+            WHERE log_type = 'no_trade'
+            ORDER BY timestamp DESC
+            LIMIT ?
+        ''', (limit,))
+        
+        no_trades = cursor.fetchall()
+        
+        print("\n" + "="*70)
+        print(f"❌ چرا معامله نشد؟ (آخرین {limit} مورد)")
+        print("="*70)
+        print("\n💡 این بخش برای یادگیری بسیار مهم است!")
+        
+        for row in no_trades:
+            timestamp, message, data_json = row
+            
+            time_str = datetime.fromisoformat(timestamp).strftime('%H:%M:%S')
+            
+            print(f"\n{Fore.YELLOW}[{time_str}]{Style.RESET_ALL}")
+            print(f"  {message}")
+            
+            if data_json:
+                try:
+                    data = json.loads(data_json)
+                    if 'prediction' in data:
+                        print(f"  📊 ML Prediction: {data['prediction']:.3f}")
+                    if 'adx' in data:
+                        print(f"  📈 ADX: {data['adx']:.1f}")
+                    if 'rsi' in data:
+                        print(f"  📊 RSI: {data['rsi']:.1f}")
+                except:
+                    pass
+        
+        conn.close()
+    
+    def get_trade_history(self, limit: int = 10):
+        """تاریخچه معاملات"""
+        
+        if not self.db_exists:
+            return
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT timestamp, action, direction, price, volume, sl, tp, reason
+            FROM trades
+            ORDER BY timestamp DESC
+            LIMIT ?
+        ''', (limit,))
+        
+        trades = cursor.fetchall()
+        
+        if not trades:
+            print("\n⚠️ هیچ معامله‌ای ثبت نشده است")
+            conn.close()
+            return
+        
+        print("\n" + "="*70)
+        print(f"💰 تاریخچه معاملات (آخرین {limit})")
+        print("="*70)
+        
+        for row in trades:
+            timestamp, action, direction, price, volume, sl, tp, reason = row
+            
+            time_str = datetime.fromisoformat(timestamp).strftime('%H:%M:%S')
+            
+            if action == "OPEN":
+                if direction == "BUY":
+                    emoji = "🚀"
+                    color = Fore.GREEN
+                else:
+                    emoji = "🔻"
+                    color = Fore.RED
+                
+                print(f"\n{color}[{time_str}] {emoji} {action} {direction}{Style.RESET_ALL}")
+                print(f"  Entry: {price:.5f}")
+                print(f"  Volume: {volume:.2f}")
+                print(f"  SL: {sl:.5f} | TP: {tp:.5f}")
+                print(f"  دلیل: {reason}")
+        
+        conn.close()
+    
+    def get_learning_insights(self):
+        """
+        استخراج نکات آموزشی از لاگ‌ها
+        """
+        
+        if not self.db_exists:
+            return
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        print("\n" + "="*70)
+        print("💡 نکات آموزشی (یادگیری از ربات)")
+        print("="*70)
+        
+        # 1. بیشترین دلایل رد معامله
+        cursor.execute('''
+            SELECT reason, COUNT(*) as count
+            FROM decisions
+            WHERE decision = 'REJECTED'
+            GROUP BY reason
+            ORDER BY count DESC
+            LIMIT 5
+        ''')
+        
+        rejected = cursor.fetchall()
+        
+        if rejected:
+            print("\n🔍 بیشترین دلایل رد معامله:")
+            for i, (reason, count) in enumerate(rejected, 1):
+                print(f"   {i}. {reason}: {count} بار")
+            
+            print("\n💡 درس:")
+            print("   - ربات بیشتر معاملات را به این دلایل رد می‌کند")
+            print("   - برای تولید سیگنال بیشتر، این شرایط را بهبود دهید")
+        
+        # 2. میانگین ADX و RSI در معاملات موفق
+        cursor.execute('''
+            SELECT AVG(adx), AVG(rsi)
+            FROM decisions
+            WHERE decision = 'ALLOWED'
+        ''')
+        
+        stats = cursor.fetchone()
+        
+        if stats and stats[0]:
+            avg_adx, avg_rsi = stats
+            print(f"\n📊 شرایط ایده‌آل برای معامله:")
+            print(f"   - میانگین ADX: {avg_adx:.1f}")
+            print(f"   - میانگین RSI: {avg_rsi:.1f}")
+            
+            print("\n💡 درس:")
+            print(f"   - ربات بیشتر در ADX حدود {avg_adx:.0f} معامله می‌کند")
+            print(f"   - RSI حدود {avg_rsi:.0f} شرایط مناسبی است")
+        
+        # 3. نسبت معاملات انجام شده به کل سیگنال‌ها
+        cursor.execute("SELECT COUNT(*) FROM decisions WHERE decision='ALLOWED'")
+        allowed = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM decisions WHERE decision='REJECTED'")
+        rejected_count = cursor.fetchone()[0]
+        
+        total = allowed + rejected_count
+        
+        if total > 0:
+            ratio = (allowed / total) * 100
+            
+            print(f"\n🎯 نسبت موفقیت سیگنال:")
+            print(f"   - {allowed} معامله از {total} سیگنال ({ratio:.1f}%)")
+            
+            print("\n💡 درس:")
+            if ratio < 10:
+                print("   - فیلترها خیلی سخت‌گیرانه هستند")
+                print("   - threshold ها را کمی کاهش دهید")
+            elif ratio > 40:
+                print("   - فیلترها شاید خیلی آسان هستند")
+                print("   - دقت بیشتری نیاز است")
+            else:
+                print("   - نسبت مناسبی است")
+        
+        conn.close()
+        print("="*70)
+    
+    def interactive_menu(self):
+        """منوی تعاملی"""
+        
+        if not self.db_exists:
+            return
+        
+        while True:
+            print("\n" + "="*70)
+            print("📚 مشاهده‌گر لاگ‌های آموزشی")
+            print("="*70)
+            print("\n1️⃣  خلاصه کلی")
+            print("2️⃣  آخرین تصمیمات")
+            print("3️⃣  چرا معامله نشد؟ (آموزشی)")
+            print("4️⃣  تاریخچه معاملات")
+            print("5️⃣  نکات یادگیری")
+            print("0️⃣  خروج")
+            
+            choice = input("\n➤ انتخاب کنید: ").strip()
+            
+            if choice == '1':
+                self.get_summary()
+            elif choice == '2':
+                self.get_recent_decisions(10)
+            elif choice == '3':
+                self.get_no_trade_reasons(10)
+            elif choice == '4':
+                self.get_trade_history(10)
+            elif choice == '5':
+                self.get_learning_insights()
+            elif choice == '0':
+                print("\n👋 خداحافظ!")
+                break
+            else:
+                print("\n⚠️ انتخاب نامعتبر")
+            
+            input("\nEnter برای ادامه...")
+
+
+# ============ اجرا ============
+if __name__ == "__main__":
+    print("\n🔍 مشاهده‌گر لاگ‌های آموزشی\n")
+    
+    viewer = LogViewer()
+    
+    if viewer.db_exists:
+        viewer.interactive_menu()
+    else:
+        print("\n💡 برای ساخت لاگ، ابتدا ربات را اجرا کنید:")
+        print("   python run_bot_explained.py")

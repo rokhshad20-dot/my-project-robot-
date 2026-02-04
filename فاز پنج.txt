@@ -1,0 +1,1980 @@
+"""
+====================================================================
+فایل: integration_example.py
+مثال یکپارچه‌سازی Hybrid Analyzer با ربات اصلی
+====================================================================
+این فایل نشون می‌ده چطور از HybridAnalyzer در ربات استفاده کنیم
+====================================================================
+"""
+
+import pandas as pd
+import numpy as np
+from typing import Optional
+import sys
+import os
+
+# Import کلاس‌های پروژه
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+try:
+    from core.hybrid_analyzer import HybridAnalyzer, HybridDecision
+    from core.data_handler import DataHandler
+    from core.ml_model import TradingModel
+    from core.risk_manager import RiskManager
+except ImportError as e:
+    print(f"⚠️ خطا در import: {e}")
+    print("این فایل فرض می‌کنه که ساختار پروژه به این شکل باشه:")
+    print("  core/hybrid_analyzer.py")
+    print("  core/data_handler.py")
+    print("  core/ml_model.py")
+    print("  core/risk_manager.py")
+    sys.exit(1)
+
+
+class EnhancedTradingBot:
+    """
+    نسخه پیشرفته ربات معامله‌گر با تحلیل ترکیبی
+    """
+    
+    def __init__(self, config: dict):
+        """راه‌اندازی ربات با قابلیت تحلیل ترکیبی"""
+        self.config = config
+        
+        # کامپوننت‌های اصلی
+        self.data_handler = DataHandler(config)
+        self.ml_model = TradingModel()
+        self.risk_manager = RiskManager(config)
+        
+        # تحلیلگر ترکیبی جدید! 🎯
+        self.hybrid_analyzer = HybridAnalyzer(config)
+        
+        # وضعیت
+        self.is_running = False
+        self.positions = []
+        
+        print("✅ ربات پیشرفته با Hybrid Analysis راه‌اندازی شد")
+    
+    def load_model(self, model_path: str):
+        """بارگذاری مدل ML"""
+        try:
+            self.ml_model.load_model(model_path)
+            print(f"✅ مدل از {model_path} بارگذاری شد")
+        except Exception as e:
+            print(f"❌ خطا در بارگذاری مدل: {e}")
+    
+    def analyze_and_decide(self, symbol: str, timeframe: str) -> Optional[dict]:
+        """
+        تحلیل جامع و تصمیم‌گیری هوشمند
+        
+        این تابع جایگزین تابع قدیمی get_ml_signal می‌شود
+        
+        Returns:
+            dict با جزئیات کامل یا None
+        """
+        print(f"\n{'='*60}")
+        print(f"🔍 شروع تحلیل {symbol} - {timeframe}")
+        print(f"{'='*60}")
+        
+        # ========================================
+        # مرحله 1: دریافت داده
+        # ========================================
+        df = self.data_handler.get_data(symbol, timeframe, bars=500)
+        
+        if df is None or len(df) < 100:
+            print("❌ داده کافی در دسترس نیست")
+            return None
+        
+        print(f"✅ {len(df)} کندل دریافت شد")
+        
+        # ========================================
+        # مرحله 2: پیش‌بینی ML
+        # ========================================
+        try:
+            # آماده‌سازی داده برای ML
+            X = self.data_handler.prepare_features(df)
+            
+            if X is None or len(X) == 0:
+                print("❌ خطا در آماده‌سازی features")
+                return None
+            
+            # پیش‌بینی
+            ml_prediction = self.ml_model.predict(X[-1:])
+            ml_prediction = float(ml_prediction[0])
+            
+            # محاسبه اطمینان (فاصله از 0.5)
+            ml_confidence = abs(ml_prediction - 0.5) * 2
+            
+            print(f"\n🤖 پیش‌بینی ML: {ml_prediction:.3f}")
+            print(f"   اطمینان: {ml_confidence*100:.1f}%")
+            
+        except Exception as e:
+            print(f"❌ خطا در پیش‌بینی ML: {e}")
+            return None
+        
+        # ========================================
+        # مرحله 3: تحلیل ترکیبی 🎯
+        # ========================================
+        print(f"\n🔄 شروع تحلیل ترکیبی...")
+        
+        try:
+            decision: HybridDecision = self.hybrid_analyzer.analyze(
+                df=df,
+                ml_prediction=ml_prediction,
+                ml_confidence=ml_confidence
+            )
+            
+            # نمایش توضیحات کامل
+            print("\n" + self.hybrid_analyzer.explain_decision(decision))
+            
+        except Exception as e:
+            print(f"❌ خطا در تحلیل ترکیبی: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+        
+        # ========================================
+        # مرحله 4: بررسی نهایی
+        # ========================================
+        if not decision.should_trade:
+            print("\n❌ تحلیل ترکیبی معامله را رد کرد")
+            return None
+        
+        # ========================================
+        # مرحله 5: بررسی مدیریت ریسک
+        # ========================================
+        current_price = df.iloc[-1]['close']
+        atr = df.iloc[-1]['ATR'] if 'ATR' in df.columns else 0.0015
+        
+        # محاسبه حجم
+        volume = self.risk_manager.calculate_position_size(
+            balance=10000,  # باید از MT5 دریافت شود
+            risk_percent=self.config.get('risk_per_trade', 0.01),
+            atr=atr,
+            sl_multiplier=self.config.get('sl_multiplier', 2.0)
+        )
+        
+        if volume <= 0:
+            print("❌ حجم معامله صفر یا منفی است")
+            return None
+        
+        # محاسبه SL/TP
+        sl_distance = atr * self.config.get('sl_multiplier', 2.0)
+        tp_distance = sl_distance * self.config.get('risk_reward', 2.0)
+        
+        if decision.direction == 'BUY':
+            sl = current_price - sl_distance
+            tp = current_price + tp_distance
+        else:  # SELL
+            sl = current_price + sl_distance
+            tp = current_price - tp_distance
+        
+        # ========================================
+        # مرحله 6: ساخت سیگنال نهایی
+        # ========================================
+        signal = {
+            'symbol': symbol,
+            'direction': decision.direction,
+            'entry_price': current_price,
+            'volume': volume,
+            'sl': sl,
+            'tp': tp,
+            'confidence': decision.confidence,
+            
+            # اطلاعات ML
+            'ml_prediction': decision.ml_prediction,
+            'ml_confidence': decision.ml_confidence,
+            
+            # اطلاعات تکنیکال
+            'patterns': decision.patterns_found,
+            'near_support': decision.near_support,
+            'near_resistance': decision.near_resistance,
+            'has_divergence': decision.has_divergence,
+            'divergence_type': decision.divergence_type,
+            
+            # دلایل و هشدارها
+            'reasons': decision.reasons,
+            'warnings': decision.warnings,
+            
+            # اطلاعات اضافی
+            'atr': atr,
+            'timestamp': pd.Timestamp.now()
+        }
+        
+        print(f"\n✅ سیگنال معامله آماده است:")
+        print(f"   جهت: {signal['direction']}")
+        print(f"   حجم: {signal['volume']:.2f}")
+        print(f"   ورود: {signal['entry_price']:.5f}")
+        print(f"   SL: {signal['sl']:.5f} ({sl_distance*10000:.1f} پیپ)")
+        print(f"   TP: {signal['tp']:.5f} ({tp_distance*10000:.1f} پیپ)")
+        print(f"   اطمینان: {signal['confidence']*100:.1f}%")
+        
+        return signal
+    
+    def execute_trade(self, signal: dict) -> bool:
+        """
+        اجرای معامله (باید با MT5 یکپارچه شود)
+        """
+        print(f"\n🚀 اجرای معامله...")
+        print(f"   این قسمت باید به MT5 متصل شود")
+        
+        # اینجا باید کد اتصال به MT5 نوشته شود
+        # مثال:
+        # import MetaTrader5 as mt5
+        # request = {
+        #     "action": mt5.TRADE_ACTION_DEAL,
+        #     "symbol": signal['symbol'],
+        #     "volume": signal['volume'],
+        #     "type": mt5.ORDER_TYPE_BUY if signal['direction'] == 'BUY' else mt5.ORDER_TYPE_SELL,
+        #     "price": signal['entry_price'],
+        #     "sl": signal['sl'],
+        #     "tp": signal['tp'],
+        #     "deviation": 10,
+        #     "magic": 234000,
+        #     "comment": "Hybrid Analysis Trade",
+        #     "type_time": mt5.ORDER_TIME_GTC,
+        #     "type_filling": mt5.ORDER_FILLING_IOC,
+        # }
+        # result = mt5.order_send(request)
+        
+        return True
+    
+    def run_cycle(self, symbol: str, timeframe: str):
+        """
+        یک چرخه کامل: تحلیل + تصمیم + اجرا
+        """
+        # تحلیل و تصمیم‌گیری
+        signal = self.analyze_and_decide(symbol, timeframe)
+        
+        if signal is None:
+            print("\n⏭️ هیچ سیگنالی یافت نشد، منتظر فرصت بعدی...")
+            return False
+        
+        # بررسی تعداد پوزیشن‌های باز
+        if len(self.positions) >= self.config.get('max_positions', 2):
+            print(f"\n⚠️ حداکثر {len(self.positions)} پوزیشن باز است")
+            return False
+        
+        # اجرای معامله
+        success = self.execute_trade(signal)
+        
+        if success:
+            self.positions.append(signal)
+            print(f"\n✅ معامله با موفقیت اجرا شد!")
+            return True
+        else:
+            print(f"\n❌ خطا در اجرای معامله")
+            return False
+
+
+# ============ تست ============
+if __name__ == "__main__":
+    print("\n🧪 تست یکپارچه‌سازی Hybrid Analyzer\n")
+    
+    # تنظیمات
+    config = {
+        'symbol': 'EURUSD',
+        'timeframe': 'H1',
+        'risk_per_trade': 0.01,
+        'sl_multiplier': 2.0,
+        'risk_reward': 2.0,
+        'max_positions': 2,
+        
+        # تنظیمات Hybrid
+        'ml_threshold': 0.65,
+        'sr_proximity': 15,
+        'pattern_weight': 0.3
+    }
+    
+    print("📋 ساخت ربات پیشرفته...")
+    
+    # نکته: این تست فرضی است و نیاز به فایل‌های واقعی دارد
+    # در محیط واقعی باید این کد اجرا شود:
+    
+    # bot = EnhancedTradingBot(config)
+    # bot.load_model('models/trading_model.keras')
+    # bot.run_cycle('EURUSD', 'H1')
+    
+    print("\n" + "="*60)
+    print("💡 نحوه استفاده در ربات اصلی:")
+    print("="*60)
+    print("""
+# در فایل اصلی ربات (ultimate_bot_final.py):
+
+from core.hybrid_analyzer import HybridAnalyzer
+
+class UltimateBot:
+    def __init__(self):
+        # ... کدهای قبلی ...
+        
+        # اضافه کردن Hybrid Analyzer
+        self.hybrid_analyzer = HybridAnalyzer(self.config)
+    
+    def check_trading_opportunity(self):
+        # دریافت داده
+        df = self.get_market_data()
+        
+        # پیش‌بینی ML
+        ml_pred = self.ml_model.predict(df)
+        
+        # تحلیل ترکیبی 🎯
+        decision = self.hybrid_analyzer.analyze(
+            df=df,
+            ml_prediction=ml_pred
+        )
+        
+        if decision.should_trade:
+            # ادامه منطق معامله
+            self.open_position(decision)
+        else:
+            # لاگ دلایل عدم معامله
+            self.log_rejection(decision)
+    """)
+    
+    print("\n✅ برای استفاده واقعی، این کد را در ربات اصلی قرار دهید")
+
+
+
+
+"""
+====================================================================
+فایل: hybrid_analyzer.py
+تحلیلگر ترکیبی: ML + Technical Analysis
+====================================================================
+این فایل قلب سیستم تصمیم‌گیری است!
+ML پیشنهاد می‌دهد، TA تأیید یا رد می‌کند
+====================================================================
+"""
+
+import pandas as pd
+import numpy as np
+from typing import Dict, Tuple, Optional, List
+from dataclasses import dataclass
+import sys
+import os
+
+# اضافه کردن مسیر پروژه
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+# Import کلاس‌های تحلیل تکنیکال
+try:
+    from analysis.pattern_recognition import PatternRecognizer, Pattern
+    from analysis.support_resistance import SupportResistanceDetector, Level
+except ImportError:
+    print("⚠️ هشدار: فایل‌های pattern_recognition و support_resistance یافت نشد")
+    PatternRecognizer = None
+    SupportResistanceDetector = None
+
+
+@dataclass
+class HybridDecision:
+    """نتیجه تصمیم‌گیری ترکیبی"""
+    should_trade: bool
+    direction: str  # 'BUY', 'SELL', 'NONE'
+    confidence: float  # 0 to 1
+    reasons: List[str]
+    warnings: List[str]
+    
+    ml_prediction: float
+    ml_confidence: float
+    
+    patterns_found: List[str]
+    near_support: Optional[float]
+    near_resistance: Optional[float]
+    
+    has_divergence: bool
+    divergence_type: Optional[str]
+
+
+class HybridAnalyzer:
+    """
+    تحلیلگر ترکیبی: ترکیب ML با Technical Analysis
+    
+    منطق تصمیم‌گیری:
+    1. ML پیشنهاد اولیه می‌دهد
+    2. الگوهای کندلی بررسی می‌شوند
+    3. حمایت/مقاومت چک می‌شوند
+    4. واگرایی بررسی می‌شود
+    5. تصمیم نهایی گرفته می‌شود
+    """
+    
+    def __init__(self, config: Dict = None):
+        """
+        Args:
+            config: تنظیمات (اختیاری)
+        """
+        self.config = config or {}
+        
+        # پیکربندی پیش‌فرض
+        self.ml_threshold = self.config.get('ml_threshold', 0.65)
+        self.sr_proximity = self.config.get('sr_proximity', 15)  # پیپ
+        self.pattern_weight = self.config.get('pattern_weight', 0.3)
+        
+        # ابزارهای تحلیل
+        self.pattern_recognizer = PatternRecognizer() if PatternRecognizer else None
+        self.sr_detector = SupportResistanceDetector() if SupportResistanceDetector else None
+        
+        print("✅ Hybrid Analyzer راه‌اندازی شد")
+    
+    def analyze(
+        self,
+        df: pd.DataFrame,
+        ml_prediction: float,
+        ml_confidence: float = None
+    ) -> HybridDecision:
+        """
+        تحلیل جامع و تصمیم‌گیری نهایی
+        
+        Args:
+            df: DataFrame با داده‌های OHLC و اندیکاتورها
+            ml_prediction: خروجی مدل ML (0 تا 1)
+            ml_confidence: اطمینان مدل (اختیاری)
+        
+        Returns:
+            HybridDecision با تمام جزئیات
+        """
+        if ml_confidence is None:
+            ml_confidence = abs(ml_prediction - 0.5) * 2
+        
+        # مقداردهی اولیه
+        reasons = []
+        warnings = []
+        patterns_found = []
+        
+        current_price = df.iloc[-1]['close']
+        
+        # ========================================
+        # مرحله 1: بررسی پیشنهاد ML
+        # ========================================
+        ml_direction = self._get_ml_direction(ml_prediction)
+        
+        if ml_direction == 'NONE':
+            return HybridDecision(
+                should_trade=False,
+                direction='NONE',
+                confidence=0.0,
+                reasons=["ML سیگنال ضعیف داد"],
+                warnings=[],
+                ml_prediction=ml_prediction,
+                ml_confidence=ml_confidence,
+                patterns_found=[],
+                near_support=None,
+                near_resistance=None,
+                has_divergence=False,
+                divergence_type=None
+            )
+        
+        reasons.append(f"ML پیشنهاد {ml_direction} با اطمینان {ml_confidence*100:.1f}%")
+        
+        # ========================================
+        # مرحله 2: بررسی الگوهای کندلی
+        # ========================================
+        pattern_score = 0
+        pattern_conflict = False
+        
+        if self.pattern_recognizer:
+            patterns = self.pattern_recognizer.analyze(df, lookback=10)
+            
+            if patterns:
+                for pattern in patterns:
+                    patterns_found.append(f"{pattern.name} ({pattern.type})")
+                    
+                    # بررسی تطابق با ML
+                    if ml_direction == 'BUY' and pattern.type == 'BULLISH':
+                        pattern_score += pattern.strength * self.pattern_weight
+                        reasons.append(f"✅ الگوی {pattern.name} تأیید می‌کند")
+                    
+                    elif ml_direction == 'SELL' and pattern.type == 'BEARISH':
+                        pattern_score += pattern.strength * self.pattern_weight
+                        reasons.append(f"✅ الگوی {pattern.name} تأیید می‌کند")
+                    
+                    elif ml_direction == 'BUY' and pattern.type == 'BEARISH':
+                        pattern_conflict = True
+                        warnings.append(f"⚠️ الگوی {pattern.name} مخالف است!")
+                    
+                    elif ml_direction == 'SELL' and pattern.type == 'BULLISH':
+                        pattern_conflict = True
+                        warnings.append(f"⚠️ الگوی {pattern.name} مخالف است!")
+        
+        # ========================================
+        # مرحله 3: بررسی حمایت/مقاومت
+        # ========================================
+        near_support = None
+        near_resistance = None
+        sr_conflict = False
+        
+        if self.sr_detector:
+            # پیدا کردن سطوح
+            levels = self.sr_detector.find_levels(df, method='pivot')
+            nearest = self.sr_detector.get_nearest_levels(current_price, count=2)
+            
+            # نزدیک‌ترین حمایت
+            if nearest['support']:
+                sup = nearest['support'][0]
+                distance_pips = (current_price - sup.price) * 10000
+                near_support = sup.price
+                
+                if distance_pips < self.sr_proximity:
+                    if ml_direction == 'BUY':
+                        reasons.append(f"✅ نزدیک حمایت {sup.price:.5f} ({distance_pips:.1f} پیپ)")
+                    else:
+                        warnings.append(f"⚠️ نزدیک حمایت - خطر شکست!")
+            
+            # نزدیک‌ترین مقاومت
+            if nearest['resistance']:
+                res = nearest['resistance'][0]
+                distance_pips = (res.price - current_price) * 10000
+                near_resistance = res.price
+                
+                if distance_pips < self.sr_proximity:
+                    if ml_direction == 'SELL':
+                        reasons.append(f"✅ نزدیک مقاومت {res.price:.5f} ({distance_pips:.1f} پیپ)")
+                    else:
+                        sr_conflict = True
+                        warnings.append(f"❌ نزدیک مقاومت - احتمال برگشت!")
+        
+        # ========================================
+        # مرحله 4: بررسی واگرایی (Divergence)
+        # ========================================
+        has_divergence = False
+        divergence_type = None
+        
+        divergence_result = self._check_divergence(df)
+        if divergence_result:
+            has_divergence = True
+            divergence_type = divergence_result
+            
+            if ml_direction == 'BUY' and divergence_result == 'BULLISH':
+                pattern_score += 0.2
+                reasons.append("✅ واگرایی صعودی RSI")
+            
+            elif ml_direction == 'SELL' and divergence_result == 'BEARISH':
+                pattern_score += 0.2
+                reasons.append("✅ واگرایی نزولی RSI")
+            
+            elif ml_direction == 'BUY' and divergence_result == 'BEARISH':
+                warnings.append("⚠️ واگرایی نزولی - احتیاط!")
+            
+            elif ml_direction == 'SELL' and divergence_result == 'BULLISH':
+                warnings.append("⚠️ واگرایی صعودی - احتیاط!")
+        
+        # ========================================
+        # مرحله 5: تصمیم نهایی
+        # ========================================
+        should_trade, final_confidence = self._make_final_decision(
+            ml_prediction=ml_prediction,
+            ml_confidence=ml_confidence,
+            pattern_score=pattern_score,
+            pattern_conflict=pattern_conflict,
+            sr_conflict=sr_conflict,
+            warnings=warnings
+        )
+        
+        # ساخت نتیجه نهایی
+        return HybridDecision(
+            should_trade=should_trade,
+            direction=ml_direction if should_trade else 'NONE',
+            confidence=final_confidence,
+            reasons=reasons,
+            warnings=warnings,
+            ml_prediction=ml_prediction,
+            ml_confidence=ml_confidence,
+            patterns_found=patterns_found,
+            near_support=near_support,
+            near_resistance=near_resistance,
+            has_divergence=has_divergence,
+            divergence_type=divergence_type
+        )
+    
+    def _get_ml_direction(self, prediction: float) -> str:
+        """تعیین جهت بر اساس ML"""
+        if prediction > 0.5 + (self.ml_threshold - 0.5):
+            return 'BUY'
+        elif prediction < 0.5 - (self.ml_threshold - 0.5):
+            return 'SELL'
+        else:
+            return 'NONE'
+    
+    def _check_divergence(self, df: pd.DataFrame) -> Optional[str]:
+        """
+        بررسی واگرایی RSI
+        
+        Returns:
+            'BULLISH', 'BEARISH', یا None
+        """
+        if len(df) < 20 or 'RSI' not in df.columns:
+            return None
+        
+        recent = df.iloc[-20:]
+        
+        # پیدا کردن قله‌ها و دره‌ها
+        price_highs = []
+        price_lows = []
+        rsi_highs = []
+        rsi_lows = []
+        
+        for i in range(2, len(recent) - 2):
+            # قله قیمت
+            if (recent.iloc[i]['high'] > recent.iloc[i-1]['high'] and
+                recent.iloc[i]['high'] > recent.iloc[i-2]['high'] and
+                recent.iloc[i]['high'] > recent.iloc[i+1]['high'] and
+                recent.iloc[i]['high'] > recent.iloc[i+2]['high']):
+                price_highs.append((i, recent.iloc[i]['high']))
+                rsi_highs.append((i, recent.iloc[i]['RSI']))
+            
+            # دره قیمت
+            if (recent.iloc[i]['low'] < recent.iloc[i-1]['low'] and
+                recent.iloc[i]['low'] < recent.iloc[i-2]['low'] and
+                recent.iloc[i]['low'] < recent.iloc[i+1]['low'] and
+                recent.iloc[i]['low'] < recent.iloc[i+2]['low']):
+                price_lows.append((i, recent.iloc[i]['low']))
+                rsi_lows.append((i, recent.iloc[i]['RSI']))
+        
+        # واگرایی صعودی: قیمت پایین‌تر - RSI بالاتر
+        if len(price_lows) >= 2 and len(rsi_lows) >= 2:
+            if (price_lows[-1][1] < price_lows[-2][1] and
+                rsi_lows[-1][1] > rsi_lows[-2][1]):
+                return 'BULLISH'
+        
+        # واگرایی نزولی: قیمت بالاتر - RSI پایین‌تر
+        if len(price_highs) >= 2 and len(rsi_highs) >= 2:
+            if (price_highs[-1][1] > price_highs[-2][1] and
+                rsi_highs[-1][1] < rsi_highs[-2][1]):
+                return 'BEARISH'
+        
+        return None
+    
+    def _make_final_decision(
+        self,
+        ml_prediction: float,
+        ml_confidence: float,
+        pattern_score: float,
+        pattern_conflict: bool,
+        sr_conflict: bool,
+        warnings: List[str]
+    ) -> Tuple[bool, float]:
+        """
+        تصمیم نهایی با ترکیب تمام عوامل
+        
+        Returns:
+            (should_trade, confidence)
+        """
+        # محاسبه اطمینان نهایی
+        final_confidence = ml_confidence + pattern_score
+        
+        # کاهش اطمینان در صورت تعارض
+        if pattern_conflict:
+            final_confidence *= 0.7
+        
+        if sr_conflict:
+            final_confidence *= 0.6
+        
+        # اگر خیلی هشدار داشتیم، رد کن
+        if len(warnings) >= 3:
+            return False, 0.0
+        
+        # حداقل آستانه اطمینان
+        min_confidence = 0.60
+        
+        if final_confidence >= min_confidence:
+            return True, min(final_confidence, 1.0)
+        else:
+            return False, final_confidence
+    
+    def explain_decision(self, decision: HybridDecision) -> str:
+        """
+        توضیح کامل تصمیم (برای لاگ)
+        """
+        lines = []
+        lines.append("=" * 60)
+        lines.append("🧠 تحلیل ترکیبی ML + Technical Analysis")
+        lines.append("=" * 60)
+        
+        # ML
+        lines.append(f"\n1️⃣ نظر هوش مصنوعی:")
+        lines.append(f"   پیش‌بینی: {decision.ml_prediction:.3f}")
+        lines.append(f"   اطمینان: {decision.ml_confidence*100:.1f}%")
+        lines.append(f"   جهت: {decision.direction}")
+        
+        # الگوها
+        lines.append(f"\n2️⃣ الگوهای کندلی:")
+        if decision.patterns_found:
+            for pattern in decision.patterns_found:
+                lines.append(f"   • {pattern}")
+        else:
+            lines.append("   هیچ الگوی قابل توجهی یافت نشد")
+        
+        # حمایت/مقاومت
+        lines.append(f"\n3️⃣ سطوح کلیدی:")
+        if decision.near_support:
+            lines.append(f"   🟢 حمایت نزدیک: {decision.near_support:.5f}")
+        if decision.near_resistance:
+            lines.append(f"   🔴 مقاومت نزدیک: {decision.near_resistance:.5f}")
+        if not decision.near_support and not decision.near_resistance:
+            lines.append("   دور از سطوح کلیدی")
+        
+        # واگرایی
+        lines.append(f"\n4️⃣ واگرایی:")
+        if decision.has_divergence:
+            lines.append(f"   ⚠️ {decision.divergence_type} Divergence شناسایی شد")
+        else:
+            lines.append("   بدون واگرایی")
+        
+        # تصمیم نهایی
+        lines.append(f"\n5️⃣ تصمیم نهایی:")
+        if decision.should_trade:
+            lines.append(f"   ✅ معامله مجاز: {decision.direction}")
+            lines.append(f"   اطمینان نهایی: {decision.confidence*100:.1f}%")
+        else:
+            lines.append(f"   ❌ معامله انجام نمی‌شود")
+            lines.append(f"   اطمینان: {decision.confidence*100:.1f}% (< 60%)")
+        
+        # دلایل
+        if decision.reasons:
+            lines.append(f"\n✅ دلایل موافق:")
+            for reason in decision.reasons:
+                lines.append(f"   {reason}")
+        
+        # هشدارها
+        if decision.warnings:
+            lines.append(f"\n⚠️ هشدارها:")
+            for warning in decision.warnings:
+                lines.append(f"   {warning}")
+        
+        lines.append("=" * 60)
+        
+        return "\n".join(lines)
+
+
+# ============ تست ============
+if __name__ == "__main__":
+    print("\n🧪 تست Hybrid Analyzer\n")
+    
+    # ساخت داده تستی
+    n = 100
+    df = pd.DataFrame({
+        'open': np.random.uniform(1.0840, 1.0860, n),
+        'high': np.random.uniform(1.0860, 1.0880, n),
+        'low': np.random.uniform(1.0820, 1.0840, n),
+        'close': np.random.uniform(1.0840, 1.0860, n),
+        'RSI': np.random.uniform(40, 60, n),
+        'ADX': np.random.uniform(20, 35, n),
+    })
+    
+    # اطمینان از منطقی بودن high/low
+    for i in range(len(df)):
+        df.loc[i, 'high'] = max(df.loc[i, 'open'], df.loc[i, 'close'], df.loc[i, 'high'])
+        df.loc[i, 'low'] = min(df.loc[i, 'open'], df.loc[i, 'close'], df.loc[i, 'low'])
+    
+    # تست چند سناریو
+    scenarios = [
+        ("ML قوی صعودی", 0.82, 0.85),
+        ("ML متوسط صعودی", 0.68, 0.70),
+        ("ML ضعیف", 0.55, 0.60),
+        ("ML قوی نزولی", 0.18, 0.85),
+    ]
+    
+    analyzer = HybridAnalyzer()
+    
+    for name, ml_pred, ml_conf in scenarios:
+        print("\n" + "="*60)
+        print(f"📊 سناریو: {name}")
+        print("="*60)
+        
+        decision = analyzer.analyze(df, ml_pred, ml_conf)
+        
+        print(analyzer.explain_decision(decision))
+        
+        input("\nEnter برای سناریو بعدی...")
+    
+    print("\n✅ تست کامل شد!")
+
+
+
+
+
+"""
+====================================================================
+فایل: pattern_recognition.py
+تشخیص الگوهای کندلی (Candlestick Patterns)
+====================================================================
+"""
+
+import pandas as pd
+import numpy as np
+from dataclasses import dataclass
+from typing import List, Dict, Optional
+
+
+@dataclass
+class Pattern:
+    """یک الگوی شناسایی شده"""
+    name: str
+    type: str  # 'BULLISH' or 'BEARISH'
+    strength: float  # 0 to 1
+    candles: List[int]  # index های کندل‌های مربوطه
+    description: str
+
+
+class PatternRecognizer:
+    """تشخیص الگوهای کندلی"""
+    
+    def __init__(self):
+        self.patterns_found = []
+    
+    def analyze(self, df: pd.DataFrame, lookback: int = 10) -> List[Pattern]:
+        """
+        تحلیل و تشخیص الگوها
+        
+        Args:
+            df: DataFrame با ستون‌های OHLC
+            lookback: تعداد کندل برای بررسی
+        
+        Returns:
+            لیست الگوهای شناسایی شده
+        """
+        self.patterns_found = []
+        
+        if len(df) < lookback:
+            return []
+        
+        # بررسی آخرین کندل‌ها
+        recent_df = df.iloc[-lookback:].copy()
+        
+        # الگوهای تک کندلی
+        self._check_hammer(recent_df)
+        self._check_shooting_star(recent_df)
+        self._check_doji(recent_df)
+        self._check_marubozu(recent_df)
+        
+        # الگوهای دو کندلی
+        self._check_engulfing(recent_df)
+        self._check_piercing_line(recent_df)
+        self._check_dark_cloud_cover(recent_df)
+        
+        # الگوهای سه کندلی
+        self._check_morning_star(recent_df)
+        self._check_evening_star(recent_df)
+        self._check_three_white_soldiers(recent_df)
+        self._check_three_black_crows(recent_df)
+        
+        return self.patterns_found
+    
+    def _check_hammer(self, df: pd.DataFrame):
+        """چکش (Hammer) - الگوی صعودی"""
+        if len(df) < 1:
+            return
+        
+        last = df.iloc[-1]
+        
+        # محاسبات
+        body = abs(last['close'] - last['open'])
+        total_range = last['high'] - last['low']
+        
+        if total_range == 0:
+            return
+        
+        lower_shadow = min(last['open'], last['close']) - last['low']
+        upper_shadow = last['high'] - max(last['open'], last['close'])
+        
+        # شرایط Hammer:
+        # 1. سایه پایینی طولانی (حداقل 2 برابر بدنه)
+        # 2. سایه بالایی کوچک یا نداشته باشد
+        # 3. بدنه کوچک
+        
+        is_hammer = (
+            lower_shadow > body * 2 and
+            upper_shadow < body * 0.3 and
+            body / total_range < 0.3 and
+            body / total_range > 0.05  # نه خیلی کوچک
+        )
+        
+        if is_hammer:
+            # محاسبه قدرت
+            strength = min(lower_shadow / body / 2, 1.0)
+            
+            self.patterns_found.append(Pattern(
+                name="Hammer",
+                type="BULLISH",
+                strength=strength,
+                candles=[len(df) - 1],
+                description="چکش - سیگنال برگشت صعودی قوی"
+            ))
+    
+    def _check_shooting_star(self, df: pd.DataFrame):
+        """ستاره دنباله‌دار (Shooting Star) - الگوی نزولی"""
+        if len(df) < 1:
+            return
+        
+        last = df.iloc[-1]
+        
+        body = abs(last['close'] - last['open'])
+        total_range = last['high'] - last['low']
+        
+        if total_range == 0:
+            return
+        
+        lower_shadow = min(last['open'], last['close']) - last['low']
+        upper_shadow = last['high'] - max(last['open'], last['close'])
+        
+        # شرایط Shooting Star (عکس Hammer)
+        is_shooting_star = (
+            upper_shadow > body * 2 and
+            lower_shadow < body * 0.3 and
+            body / total_range < 0.3 and
+            body / total_range > 0.05
+        )
+        
+        if is_shooting_star:
+            strength = min(upper_shadow / body / 2, 1.0)
+            
+            self.patterns_found.append(Pattern(
+                name="Shooting Star",
+                type="BEARISH",
+                strength=strength,
+                candles=[len(df) - 1],
+                description="ستاره دنباله‌دار - سیگنال برگشت نزولی"
+            ))
+    
+    def _check_doji(self, df: pd.DataFrame):
+        """دوجی (Doji) - الگوی بی‌تصمیمی"""
+        if len(df) < 1:
+            return
+        
+        last = df.iloc[-1]
+        
+        body = abs(last['close'] - last['open'])
+        total_range = last['high'] - last['low']
+        
+        if total_range == 0:
+            return
+        
+        # دوجی: بدنه خیلی کوچک (کمتر از 5% رنج کل)
+        is_doji = body / total_range < 0.05
+        
+        if is_doji:
+            # نوع Doji بر اساس موقعیت
+            open_close_mid = (last['open'] + last['close']) / 2
+            range_position = (open_close_mid - last['low']) / total_range
+            
+            if range_position > 0.6:
+                doji_type = "Dragonfly Doji (صعودی)"
+                pattern_type = "BULLISH"
+            elif range_position < 0.4:
+                doji_type = "Gravestone Doji (نزولی)"
+                pattern_type = "BEARISH"
+            else:
+                doji_type = "Standard Doji (خنثی)"
+                pattern_type = "NEUTRAL"
+            
+            self.patterns_found.append(Pattern(
+                name="Doji",
+                type=pattern_type,
+                strength=0.5,
+                candles=[len(df) - 1],
+                description=f"{doji_type} - بی‌تصمیمی در بازار"
+            ))
+    
+    def _check_marubozu(self, df: pd.DataFrame):
+        """ماروبوزو (Marubozu) - الگوی قدرتمند"""
+        if len(df) < 1:
+            return
+        
+        last = df.iloc[-1]
+        
+        body = abs(last['close'] - last['open'])
+        total_range = last['high'] - last['low']
+        
+        if total_range == 0:
+            return
+        
+        # ماروبوزو: بدنه بزرگ (بیش از 90% رنج)
+        is_marubozu = body / total_range > 0.90
+        
+        if is_marubozu:
+            if last['close'] > last['open']:
+                pattern_type = "BULLISH"
+                desc = "ماروبوزوی صعودی - قدرت خریداران"
+            else:
+                pattern_type = "BEARISH"
+                desc = "ماروبوزوی نزولی - قدرت فروشندگان"
+            
+            strength = body / total_range
+            
+            self.patterns_found.append(Pattern(
+                name="Marubozu",
+                type=pattern_type,
+                strength=strength,
+                candles=[len(df) - 1],
+                description=desc
+            ))
+    
+    def _check_engulfing(self, df: pd.DataFrame):
+        """الگوی بلع کننده (Engulfing)"""
+        if len(df) < 2:
+            return
+        
+        prev = df.iloc[-2]
+        last = df.iloc[-1]
+        
+        prev_body = abs(prev['close'] - prev['open'])
+        last_body = abs(last['close'] - last['open'])
+        
+        # Bullish Engulfing
+        is_bullish_engulfing = (
+            prev['close'] < prev['open'] and  # کندل قبلی نزولی
+            last['close'] > last['open'] and  # کندل فعلی صعودی
+            last['open'] < prev['close'] and  # باز شدن زیر بسته شدن قبلی
+            last['close'] > prev['open'] and  # بسته شدن بالای باز شدن قبلی
+            last_body > prev_body * 1.2  # بدنه بزرگ‌تر
+        )
+        
+        if is_bullish_engulfing:
+            strength = min(last_body / prev_body / 2, 1.0)
+            
+            self.patterns_found.append(Pattern(
+                name="Bullish Engulfing",
+                type="BULLISH",
+                strength=strength,
+                candles=[len(df) - 2, len(df) - 1],
+                description="بلع کننده صعودی - سیگنال خرید قوی"
+            ))
+        
+        # Bearish Engulfing
+        is_bearish_engulfing = (
+            prev['close'] > prev['open'] and  # کندل قبلی صعودی
+            last['close'] < last['open'] and  # کندل فعلی نزولی
+            last['open'] > prev['close'] and  # باز شدن بالای بسته شدن قبلی
+            last['close'] < prev['open'] and  # بسته شدن زیر باز شدن قبلی
+            last_body > prev_body * 1.2
+        )
+        
+        if is_bearish_engulfing:
+            strength = min(last_body / prev_body / 2, 1.0)
+            
+            self.patterns_found.append(Pattern(
+                name="Bearish Engulfing",
+                type="BEARISH",
+                strength=strength,
+                candles=[len(df) - 2, len(df) - 1],
+                description="بلع کننده نزولی - سیگنال فروش قوی"
+            ))
+    
+    def _check_piercing_line(self, df: pd.DataFrame):
+        """خط نافذ (Piercing Line) - صعودی"""
+        if len(df) < 2:
+            return
+        
+        prev = df.iloc[-2]
+        last = df.iloc[-1]
+        
+        prev_body = abs(prev['close'] - prev['open'])
+        
+        is_piercing = (
+            prev['close'] < prev['open'] and  # کندل قبلی نزولی
+            last['close'] > last['open'] and  # کندل فعلی صعودی
+            last['open'] < prev['close'] and  # باز شدن زیر بسته شدن قبلی
+            last['close'] > (prev['open'] + prev['close']) / 2 and  # بسته شدن بالای میانه
+            last['close'] < prev['open']  # اما زیر باز شدن قبلی
+        )
+        
+        if is_piercing:
+            # قدرت بر اساس نفوذ
+            penetration = (last['close'] - prev['close']) / prev_body
+            strength = min(penetration, 1.0)
+            
+            self.patterns_found.append(Pattern(
+                name="Piercing Line",
+                type="BULLISH",
+                strength=strength,
+                candles=[len(df) - 2, len(df) - 1],
+                description="خط نافذ - سیگنال خرید"
+            ))
+    
+    def _check_dark_cloud_cover(self, df: pd.DataFrame):
+        """ابر تیره (Dark Cloud Cover) - نزولی"""
+        if len(df) < 2:
+            return
+        
+        prev = df.iloc[-2]
+        last = df.iloc[-1]
+        
+        prev_body = abs(prev['close'] - prev['open'])
+        
+        is_dark_cloud = (
+            prev['close'] > prev['open'] and  # کندل قبلی صعودی
+            last['close'] < last['open'] and  # کندل فعلی نزولی
+            last['open'] > prev['close'] and  # باز شدن بالای بسته شدن قبلی
+            last['close'] < (prev['open'] + prev['close']) / 2 and  # بسته شدن زیر میانه
+            last['close'] > prev['open']  # اما بالای باز شدن قبلی
+        )
+        
+        if is_dark_cloud:
+            penetration = (prev['close'] - last['close']) / prev_body
+            strength = min(penetration, 1.0)
+            
+            self.patterns_found.append(Pattern(
+                name="Dark Cloud Cover",
+                type="BEARISH",
+                strength=strength,
+                candles=[len(df) - 2, len(df) - 1],
+                description="ابر تیره - سیگنال فروش"
+            ))
+    
+    def _check_morning_star(self, df: pd.DataFrame):
+        """ستاره صبحگاهی (Morning Star) - صعودی قوی"""
+        if len(df) < 3:
+            return
+        
+        c1 = df.iloc[-3]
+        c2 = df.iloc[-2]
+        c3 = df.iloc[-1]
+        
+        c1_body = abs(c1['close'] - c1['open'])
+        c2_body = abs(c2['close'] - c2['open'])
+        c3_body = abs(c3['close'] - c3['open'])
+        
+        is_morning_star = (
+            c1['close'] < c1['open'] and  # کندل 1: نزولی قوی
+            c1_body > 0.001 and
+            c2_body < c1_body * 0.3 and  # کندل 2: بدنه کوچک (ستاره)
+            c3['close'] > c3['open'] and  # کندل 3: صعودی قوی
+            c3_body > c1_body * 0.8 and
+            c3['close'] > (c1['open'] + c1['close']) / 2  # نفوذ خوب
+        )
+        
+        if is_morning_star:
+            strength = min(c3_body / c1_body, 1.0)
+            
+            self.patterns_found.append(Pattern(
+                name="Morning Star",
+                type="BULLISH",
+                strength=strength,
+                candles=[len(df) - 3, len(df) - 2, len(df) - 1],
+                description="ستاره صبحگاهی - سیگنال برگشت صعودی بسیار قوی"
+            ))
+    
+    def _check_evening_star(self, df: pd.DataFrame):
+        """ستاره عصرگاهی (Evening Star) - نزولی قوی"""
+        if len(df) < 3:
+            return
+        
+        c1 = df.iloc[-3]
+        c2 = df.iloc[-2]
+        c3 = df.iloc[-1]
+        
+        c1_body = abs(c1['close'] - c1['open'])
+        c2_body = abs(c2['close'] - c2['open'])
+        c3_body = abs(c3['close'] - c3['open'])
+        
+        is_evening_star = (
+            c1['close'] > c1['open'] and  # کندل 1: صعودی قوی
+            c1_body > 0.001 and
+            c2_body < c1_body * 0.3 and  # کندل 2: بدنه کوچک
+            c3['close'] < c3['open'] and  # کندل 3: نزولی قوی
+            c3_body > c1_body * 0.8 and
+            c3['close'] < (c1['open'] + c1['close']) / 2
+        )
+        
+        if is_evening_star:
+            strength = min(c3_body / c1_body, 1.0)
+            
+            self.patterns_found.append(Pattern(
+                name="Evening Star",
+                type="BEARISH",
+                strength=strength,
+                candles=[len(df) - 3, len(df) - 2, len(df) - 1],
+                description="ستاره عصرگاهی - سیگنال برگشت نزولی بسیار قوی"
+            ))
+    
+    def _check_three_white_soldiers(self, df: pd.DataFrame):
+        """سه سرباز سفید - صعودی قوی"""
+        if len(df) < 3:
+            return
+        
+        c1 = df.iloc[-3]
+        c2 = df.iloc[-2]
+        c3 = df.iloc[-1]
+        
+        # هر سه صعودی
+        all_bullish = (
+            c1['close'] > c1['open'] and
+            c2['close'] > c2['open'] and
+            c3['close'] > c3['open']
+        )
+        
+        # هر کدام بالاتر از قبلی باز و بسته می‌شوند
+        ascending = (
+            c2['open'] > c1['open'] and c2['close'] > c1['close'] and
+            c3['open'] > c2['open'] and c3['close'] > c2['close']
+        )
+        
+        # بدنه‌های مشابه
+        bodies = [
+            abs(c1['close'] - c1['open']),
+            abs(c2['close'] - c2['open']),
+            abs(c3['close'] - c3['open'])
+        ]
+        similar_bodies = max(bodies) / min(bodies) < 1.5 if min(bodies) > 0 else False
+        
+        if all_bullish and ascending and similar_bodies:
+            self.patterns_found.append(Pattern(
+                name="Three White Soldiers",
+                type="BULLISH",
+                strength=0.9,
+                candles=[len(df) - 3, len(df) - 2, len(df) - 1],
+                description="سه سرباز سفید - روند صعودی قوی"
+            ))
+    
+    def _check_three_black_crows(self, df: pd.DataFrame):
+        """سه کلاغ سیاه - نزولی قوی"""
+        if len(df) < 3:
+            return
+        
+        c1 = df.iloc[-3]
+        c2 = df.iloc[-2]
+        c3 = df.iloc[-1]
+        
+        all_bearish = (
+            c1['close'] < c1['open'] and
+            c2['close'] < c2['open'] and
+            c3['close'] < c3['open']
+        )
+        
+        descending = (
+            c2['open'] < c1['open'] and c2['close'] < c1['close'] and
+            c3['open'] < c2['open'] and c3['close'] < c2['close']
+        )
+        
+        bodies = [
+            abs(c1['close'] - c1['open']),
+            abs(c2['close'] - c2['open']),
+            abs(c3['close'] - c3['open'])
+        ]
+        similar_bodies = max(bodies) / min(bodies) < 1.5 if min(bodies) > 0 else False
+        
+        if all_bearish and descending and similar_bodies:
+            self.patterns_found.append(Pattern(
+                name="Three Black Crows",
+                type="BEARISH",
+                strength=0.9,
+                candles=[len(df) - 3, len(df) - 2, len(df) - 1],
+                description="سه کلاغ سیاه - روند نزولی قوی"
+            ))
+    
+    def get_summary(self) -> Dict:
+        """خلاصه الگوهای یافت شده"""
+        if not self.patterns_found:
+            return {
+                'total': 0,
+                'bullish': 0,
+                'bearish': 0,
+                'neutral': 0,
+                'strongest': None
+            }
+        
+        bullish = [p for p in self.patterns_found if p.type == 'BULLISH']
+        bearish = [p for p in self.patterns_found if p.type == 'BEARISH']
+        neutral = [p for p in self.patterns_found if p.type == 'NEUTRAL']
+        
+        # قوی‌ترین الگو
+        strongest = max(self.patterns_found, key=lambda p: p.strength)
+        
+        return {
+            'total': len(self.patterns_found),
+            'bullish': len(bullish),
+            'bearish': len(bearish),
+            'neutral': len(neutral),
+            'strongest': strongest,
+            'patterns': self.patterns_found
+        }
+
+
+# ============ تست ============
+if __name__ == "__main__":
+    print("\n🧪 تست Pattern Recognition\n")
+    
+    # ساخت داده تصادفی
+    n = 100
+    df = pd.DataFrame({
+        'open': np.random.uniform(1.08, 1.09, n),
+        'high': np.random.uniform(1.09, 1.10, n),
+        'low': np.random.uniform(1.07, 1.08, n),
+        'close': np.random.uniform(1.08, 1.09, n),
+    })
+    
+    # اطمینان از منطقی بودن high/low
+    for i in range(len(df)):
+        df.loc[i, 'high'] = max(df.loc[i, 'open'], df.loc[i, 'close'], df.loc[i, 'high'])
+        df.loc[i, 'low'] = min(df.loc[i, 'open'], df.loc[i, 'close'], df.loc[i, 'low'])
+    
+    # تشخیص الگوها
+    recognizer = PatternRecognizer()
+    patterns = recognizer.analyze(df, lookback=20)
+    
+    print(f"✅ {len(patterns)} الگو شناسایی شد:\n")
+    
+    for pattern in patterns:
+        emoji = "🟢" if pattern.type == "BULLISH" else "🔴" if pattern.type == "BEARISH" else "⚪"
+        print(f"{emoji} {pattern.name} ({pattern.type})")
+        print(f"   قدرت: {pattern.strength*100:.0f}%")
+        print(f"   توضیح: {pattern.description}\n")
+    
+    # خلاصه
+    summary = recognizer.get_summary()
+    print("="*60)
+    print(f"📊 خلاصه:")
+    print(f"   کل: {summary['total']}")
+    print(f"   🟢 صعودی: {summary['bullish']}")
+    print(f"   🔴 نزولی: {summary['bearish']}")
+    
+    if summary['strongest']:
+        print(f"\n⭐ قوی‌ترین: {summary['strongest'].name} ({summary['strongest'].strength*100:.0f}%)")
+    
+    print("="*60)
+
+
+
+
+
+"""
+====================================================================
+فایل: support_resistance.py
+تشخیص سطوح حمایت و مقاومت (Support & Resistance)
+نسخه کامل و تکمیل شده
+====================================================================
+"""
+
+import pandas as pd
+import numpy as np
+from typing import List, Tuple, Dict, Optional
+from dataclasses import dataclass
+
+
+@dataclass
+class Level:
+    """یک سطح حمایت یا مقاومت"""
+    price: float
+    type: str  # 'SUPPORT' or 'RESISTANCE'
+    strength: float  # 0 to 1
+    touches: int  # تعداد برخوردها
+    last_touch_index: int
+    
+    def __repr__(self):
+        return f"Level({self.type}, {self.price:.5f}, strength={self.strength:.2f}, touches={self.touches})"
+
+
+class SupportResistanceDetector:
+    """تشخیص سطوح حمایت و مقاومت"""
+    
+    def __init__(self, tolerance: float = 0.0005):
+        """
+        Args:
+            tolerance: حد خطای قیمت (به صورت درصد)
+                      مثلاً 0.0005 = 0.05% = 5 پیپ در EUR/USD
+        """
+        self.tolerance = tolerance
+        self.levels = []
+    
+    def find_levels(self, df: pd.DataFrame, method='pivot', lookback=100) -> List[Level]:
+        """
+        پیدا کردن سطوح
+        
+        Args:
+            df: DataFrame با ستون‌های OHLC
+            method: روش ('pivot', 'cluster', 'fibonacci')
+            lookback: تعداد کندل برای بررسی
+        
+        Returns:
+            لیست سطوح
+        """
+        if method == 'pivot':
+            return self._find_pivot_levels(df, lookback)
+        elif method == 'cluster':
+            return self._find_cluster_levels(df, lookback)
+        elif method == 'fibonacci':
+            return self._find_fibonacci_levels(df, lookback)
+        else:
+            return self._find_pivot_levels(df, lookback)
+    
+    def _find_pivot_levels(self, df: pd.DataFrame, lookback: int = 100) -> List[Level]:
+        """
+        پیدا کردن سطوح بر اساس Pivot Points
+        نقاطی که قیمت چندبار به آنها برخورد کرده و برگشته
+        """
+        levels = []
+        
+        # محدود کردن داده به lookback
+        if len(df) > lookback:
+            df = df.iloc[-lookback:].copy()
+        
+        # پیدا کردن نقاط بالا (Resistance)
+        for i in range(2, len(df) - 2):
+            # چک کردن آیا این نقطه یک peak است
+            if (df.iloc[i]['high'] > df.iloc[i-1]['high'] and
+                df.iloc[i]['high'] > df.iloc[i-2]['high'] and
+                df.iloc[i]['high'] > df.iloc[i+1]['high'] and
+                df.iloc[i]['high'] > df.iloc[i+2]['high']):
+                
+                price = df.iloc[i]['high']
+                
+                # چک کردن آیا سطح مشابه وجود دارد
+                existing = self._find_similar_level(price, levels)
+                
+                if existing:
+                    # اگر سطح مشابه وجود داشت، قدرتش را افزایش بده
+                    existing.touches += 1
+                    existing.last_touch_index = i
+                    existing.strength = min(existing.strength + 0.1, 1.0)
+                else:
+                    # سطح جدید
+                    levels.append(Level(
+                        price=price,
+                        type='RESISTANCE',
+                        strength=0.5,
+                        touches=1,
+                        last_touch_index=i
+                    ))
+        
+        # پیدا کردن نقاط پایین (Support)
+        for i in range(2, len(df) - 2):
+            # چک کردن آیا این نقطه یک valley است
+            if (df.iloc[i]['low'] < df.iloc[i-1]['low'] and
+                df.iloc[i]['low'] < df.iloc[i-2]['low'] and
+                df.iloc[i]['low'] < df.iloc[i+1]['low'] and
+                df.iloc[i]['low'] < df.iloc[i+2]['low']):
+                
+                price = df.iloc[i]['low']
+                
+                existing = self._find_similar_level(price, levels)
+                
+                if existing:
+                    existing.touches += 1
+                    existing.last_touch_index = i
+                    existing.strength = min(existing.strength + 0.1, 1.0)
+                else:
+                    levels.append(Level(
+                        price=price,
+                        type='SUPPORT',
+                        strength=0.5,
+                        touches=1,
+                        last_touch_index=i
+                    ))
+        
+        # حذف سطوح قدیمی (بیش از 80% lookback)
+        levels = [l for l in levels if l.last_touch_index > len(df) * 0.2]
+        
+        # مرتب‌سازی بر اساس قدرت
+        levels.sort(key=lambda x: x.strength, reverse=True)
+        
+        self.levels = levels
+        return levels
+    
+    def _find_cluster_levels(self, df: pd.DataFrame, lookback: int = 100) -> List[Level]:
+        """
+        پیدا کردن سطوح بر اساس Clustering
+        تجمع قیمت‌ها در یک ناحیه نشان‌دهنده سطح قوی است
+        """
+        levels = []
+        
+        # محدود کردن داده
+        if len(df) > lookback:
+            df = df.iloc[-lookback:].copy()
+        
+        # جمع‌آوری تمام قیمت‌های high و low
+        all_highs = df['high'].values
+        all_lows = df['low'].values
+        
+        # Clustering برای هر نوع قیمت
+        for prices, level_type in [(all_highs, 'RESISTANCE'), (all_lows, 'SUPPORT')]:
+            # مرتب‌سازی قیمت‌ها
+            sorted_prices = np.sort(prices)
+            
+            i = 0
+            while i < len(sorted_prices):
+                current_price = sorted_prices[i]
+                cluster = [current_price]
+                
+                # پیدا کردن قیمت‌های نزدیک
+                j = i + 1
+                while j < len(sorted_prices):
+                    if abs(sorted_prices[j] - current_price) / current_price < self.tolerance:
+                        cluster.append(sorted_prices[j])
+                        j += 1
+                    else:
+                        break
+                
+                # اگر cluster بزرگ بود، یک سطح قوی است
+                if len(cluster) >= 3:
+                    avg_price = np.mean(cluster)
+                    strength = min(len(cluster) / 10, 1.0)
+                    
+                    # بررسی تکراری نبودن
+                    if not self._find_similar_level(avg_price, levels):
+                        levels.append(Level(
+                            price=avg_price,
+                            type=level_type,
+                            strength=strength,
+                            touches=len(cluster),
+                            last_touch_index=len(df) - 1
+                        ))
+                
+                i = j if j > i else i + 1
+        
+        # مرتب‌سازی
+        levels.sort(key=lambda x: x.strength, reverse=True)
+        
+        self.levels = levels[:15]  # فقط 15 تای قوی‌تر
+        return self.levels
+    
+    def _find_fibonacci_levels(self, df: pd.DataFrame, lookback: int = 100) -> List[Level]:
+        """
+        محاسبه سطوح فیبوناچی
+        بر اساس آخرین swing high و swing low
+        """
+        if len(df) < lookback:
+            lookback = len(df)
+        
+        recent_df = df.iloc[-lookback:].copy()
+        
+        # پیدا کردن swing high و swing low
+        swing_high = recent_df['high'].max()
+        swing_low = recent_df['low'].min()
+        
+        diff = swing_high - swing_low
+        
+        if diff == 0:
+            return []
+        
+        # نسبت‌های فیبوناچی استاندارد
+        fib_ratios = {
+            0.0: ('Base', 0.4),
+            0.236: ('Fib 23.6%', 0.6),
+            0.382: ('Fib 38.2%', 0.8),
+            0.500: ('Fib 50%', 0.8),
+            0.618: ('Fib 61.8%', 0.8),
+            0.786: ('Fib 78.6%', 0.6),
+            1.0: ('Top', 0.4)
+        }
+        
+        levels = []
+        current_price = df.iloc[-1]['close']
+        
+        for ratio, (name, base_strength) in fib_ratios.items():
+            price = swing_low + (diff * ratio)
+            
+            # تعیین نوع بر اساس موقعیت فعلی
+            if price > current_price:
+                level_type = 'RESISTANCE'
+            else:
+                level_type = 'SUPPORT'
+            
+            levels.append(Level(
+                price=price,
+                type=level_type,
+                strength=base_strength,
+                touches=1,
+                last_touch_index=len(df) - 1
+            ))
+        
+        self.levels = levels
+        return levels
+    
+    def _find_similar_level(self, price: float, levels: List[Level]) -> Optional[Level]:
+        """
+        پیدا کردن سطح مشابه در لیست
+        
+        Args:
+            price: قیمت برای جستجو
+            levels: لیست سطوح موجود
+        
+        Returns:
+            Level مشابه یا None
+        """
+        for level in levels:
+            if abs(level.price - price) / price < self.tolerance:
+                return level
+        return None
+    
+    def get_nearest_levels(self, current_price: float, 
+                          count: int = 3) -> Dict[str, List[Level]]:
+        """
+        نزدیک‌ترین سطوح به قیمت فعلی
+        
+        Args:
+            current_price: قیمت فعلی
+            count: تعداد سطوح مورد نیاز
+        
+        Returns:
+            {'support': [...], 'resistance': [...]}
+        """
+        # فیلتر کردن بر اساس نوع
+        supports = [l for l in self.levels if l.type == 'SUPPORT' and l.price < current_price]
+        resistances = [l for l in self.levels if l.type == 'RESISTANCE' and l.price > current_price]
+        
+        # مرتب‌سازی بر اساس فاصله
+        supports.sort(key=lambda x: abs(x.price - current_price))
+        resistances.sort(key=lambda x: abs(x.price - current_price))
+        
+        return {
+            'support': supports[:count],
+            'resistance': resistances[:count]
+        }
+    
+    def is_near_level(self, price: float, threshold: float = 0.0010) -> Tuple[bool, Optional[Level]]:
+        """
+        آیا قیمت نزدیک یک سطح است؟
+        
+        Args:
+            price: قیمت فعلی
+            threshold: حد آستانه (درصد) - پیش‌فرض 10 پیپ
+        
+        Returns:
+            (is_near, level)
+        """
+        for level in self.levels:
+            distance = abs(level.price - price) / price
+            
+            if distance < threshold:
+                return True, level
+        
+        return False, None
+    
+    def get_level_strength_at_price(self, price: float, threshold: float = 0.0010) -> float:
+        """
+        محاسبه قدرت سطح در یک قیمت خاص
+        
+        Returns:
+            قدرت (0 to 1) یا 0 اگر سطحی نزدیک نباشد
+        """
+        is_near, level = self.is_near_level(price, threshold)
+        
+        if is_near and level:
+            return level.strength
+        
+        return 0.0
+    
+    def get_summary(self, current_price: float) -> Dict:
+        """
+        خلاصه کامل وضعیت سطوح
+        
+        Args:
+            current_price: قیمت فعلی
+        
+        Returns:
+            دیکشنری با اطلاعات کامل
+        """
+        nearest = self.get_nearest_levels(current_price, count=3)
+        
+        summary = {
+            'total_levels': len(self.levels),
+            'supports': len([l for l in self.levels if l.type == 'SUPPORT']),
+            'resistances': len([l for l in self.levels if l.type == 'RESISTANCE']),
+            'nearest_support': nearest['support'][0] if nearest['support'] else None,
+            'nearest_resistance': nearest['resistance'][0] if nearest['resistance'] else None,
+            'all_supports': nearest['support'],
+            'all_resistances': nearest['resistance']
+        }
+        
+        # محاسبه فاصله تا نزدیک‌ترین سطوح (به پیپ)
+        if summary['nearest_support']:
+            summary['distance_to_support'] = (current_price - summary['nearest_support'].price) * 10000
+            summary['support_strength'] = summary['nearest_support'].strength
+        else:
+            summary['distance_to_support'] = float('inf')
+            summary['support_strength'] = 0.0
+        
+        if summary['nearest_resistance']:
+            summary['distance_to_resistance'] = (summary['nearest_resistance'].price - current_price) * 10000
+            summary['resistance_strength'] = summary['nearest_resistance'].strength
+        else:
+            summary['distance_to_resistance'] = float('inf')
+            summary['resistance_strength'] = 0.0
+        
+        # محاسبه فضای معاملاتی (space to trade)
+        if summary['nearest_support'] and summary['nearest_resistance']:
+            summary['trading_space'] = (summary['nearest_resistance'].price - 
+                                       summary['nearest_support'].price) * 10000
+        else:
+            summary['trading_space'] = float('inf')
+        
+        # وضعیت قیمت در بازه
+        if summary['nearest_support'] and summary['nearest_resistance']:
+            total_range = summary['nearest_resistance'].price - summary['nearest_support'].price
+            if total_range > 0:
+                position_in_range = (current_price - summary['nearest_support'].price) / total_range
+                summary['position_in_range'] = position_in_range  # 0 to 1
+                
+                # تعیین وضعیت
+                if position_in_range < 0.3:
+                    summary['zone'] = 'NEAR_SUPPORT'
+                elif position_in_range > 0.7:
+                    summary['zone'] = 'NEAR_RESISTANCE'
+                else:
+                    summary['zone'] = 'MID_RANGE'
+            else:
+                summary['position_in_range'] = 0.5
+                summary['zone'] = 'UNKNOWN'
+        else:
+            summary['position_in_range'] = None
+            summary['zone'] = 'NO_LEVELS'
+        
+        return summary
+    
+    def print_summary(self, current_price: float):
+        """چاپ خلاصه به صورت قابل خواندن"""
+        summary = self.get_summary(current_price)
+        
+        print("\n" + "="*60)
+        print("📊 خلاصه سطوح حمایت و مقاومت")
+        print("="*60)
+        
+        print(f"\n💰 قیمت فعلی: {current_price:.5f}")
+        print(f"📈 کل سطوح: {summary['total_levels']}")
+        print(f"   🟢 حمایت‌ها: {summary['supports']}")
+        print(f"   🔴 مقاومت‌ها: {summary['resistances']}")
+        
+        print(f"\n🎯 نزدیک‌ترین سطوح:")
+        
+        if summary['nearest_support']:
+            sup = summary['nearest_support']
+            print(f"   🟢 حمایت: {sup.price:.5f}")
+            print(f"      فاصله: {summary['distance_to_support']:.1f} پیپ")
+            print(f"      قدرت: {sup.strength*100:.0f}%")
+            print(f"      برخوردها: {sup.touches}")
+        else:
+            print(f"   🟢 حمایت: یافت نشد")
+        
+        if summary['nearest_resistance']:
+            res = summary['nearest_resistance']
+            print(f"   🔴 مقاومت: {res.price:.5f}")
+            print(f"      فاصله: {summary['distance_to_resistance']:.1f} پیپ")
+            print(f"      قدرت: {res.strength*100:.0f}%")
+            print(f"      برخوردها: {res.touches}")
+        else:
+            print(f"   🔴 مقاومت: یافت نشد")
+        
+        if summary['trading_space'] != float('inf'):
+            print(f"\n📏 فضای معاملاتی: {summary['trading_space']:.1f} پیپ")
+        
+        if summary['zone'] != 'NO_LEVELS':
+            print(f"\n🎪 موقعیت: {summary['zone']}")
+            if summary['position_in_range'] is not None:
+                print(f"   ({summary['position_in_range']*100:.1f}% از بازه)")
+        
+        print("="*60)
+
+
+# ============ توابع کمکی ============
+
+def detect_round_numbers(current_price: float, digits: int = 4) -> List[Level]:
+    """
+    تشخیص اعداد رند (00, 50) که معمولاً سطوح روانی هستند
+    
+    Args:
+        current_price: قیمت فعلی
+        digits: تعداد ارقام اعشار
+    
+    Returns:
+        لیست سطوح اعداد رند
+    """
+    levels = []
+    
+    # محدوده جستجو (±100 پیپ)
+    search_range = 0.0100
+    
+    for i in range(-10, 11):
+        # اعداد رند با 00
+        round_00 = round(current_price / 0.0100) * 0.0100 + (i * 0.0100)
+        # اعداد رند با 50
+        round_50 = round(current_price / 0.0100) * 0.0100 + (i * 0.0100) + 0.0050
+        
+        for price in [round_00, round_50]:
+            if abs(price - current_price) <= search_range:
+                level_type = 'RESISTANCE' if price > current_price else 'SUPPORT'
+                
+                levels.append(Level(
+                    price=price,
+                    type=level_type,
+                    strength=0.5,
+                    touches=1,
+                    last_touch_index=0
+                ))
+    
+    return levels
+
+
+# ============ تست ============
+if __name__ == "__main__":
+    print("\n🧪 تست کامل Support & Resistance Detector\n")
+    
+    # ساخت داده شبیه‌سازی شده
+    np.random.seed(42)
+    n = 200
+    base_price = 1.0850
+    
+    # شبیه‌سازی یک روند با نوسان
+    prices = []
+    for i in range(n):
+        # روند صعودی + نویز + نوسانات
+        noise = np.random.randn() * 0.0005
+        trend = i * 0.00002
+        
+        # اضافه کردن برخی سطوح تکراری (شبیه‌سازی حمایت/مقاومت)
+        if i % 30 == 0:
+            noise += 0.0010  # jump up (resistance)
+        if i % 40 == 0:
+            noise -= 0.0008  # drop down (support)
+        
+        prices.append(base_price + trend + noise)
+    
+    # ساخت DataFrame
+    df = pd.DataFrame({
+        'open': prices,
+        'high': [p + np.random.uniform(0, 0.0005) for p in prices],
+        'low': [p - np.random.uniform(0, 0.0005) for p in prices],
+        'close': [p + np.random.randn() * 0.0002 for p in prices],
+    })
+    
+    # اطمینان از منطقی بودن High/Low
+    for i in range(len(df)):
+        df.loc[i, 'high'] = max(df.loc[i, 'open'], df.loc[i, 'close'], df.loc[i, 'high'])
+        df.loc[i, 'low'] = min(df.loc[i, 'open'], df.loc[i, 'close'], df.loc[i, 'low'])
+    
+    current_price = df.iloc[-1]['close']
+    
+    print(f"📊 تحلیل {len(df)} کندل")
+    print(f"💰 قیمت فعلی: {current_price:.5f}\n")
+    
+    # ساخت detector
+    detector = SupportResistanceDetector(tolerance=0.0005)
+    
+    # ========================================
+    # تست 1: روش Pivot Points
+    # ========================================
+    print("="*60)
+    print("1️⃣ روش PIVOT POINTS")
+    print("="*60)
+    
+    levels_pivot = detector.find_levels(df, method='pivot', lookback=100)
+    print(f"\n✅ {len(levels_pivot)} سطح یافت شد\n")
+    
+    print("🔝 قوی‌ترین سطوح:")
+    for i, level in enumerate(levels_pivot[:5], 1):
+        emoji = "🟢" if level.type == "SUPPORT" else "🔴"
+        distance = abs(level.price - current_price) * 10000
+        position = "پایین‌تر" if level.price < current_price else "بالاتر"
+        
+        print(f"\n{i}. {emoji} {level.type}")
+        print(f"   قیمت: {level.price:.5f}")
+        print(f"   قدرت: {level.strength*100:.0f}%")
+        print(f"   برخوردها: {level.touches}")
+        print(f"   فاصله: {distance:.1f} پیپ ({position})")
+    
+    # ========================================
+    # تست 2: نزدیک‌ترین سطوح
+    # ========================================
+    print("\n" + "="*60)
+    print("2️⃣ نزدیک‌ترین سطوح به قیمت فعلی")
+    print("="*60)
+    
+    nearest = detector.get_nearest_levels(current_price, count=3)
+    
+    print("\n🟢 نزدیک‌ترین حمایت‌ها:")
+    if nearest['support']:
+        for i, sup in enumerate(nearest['support'], 1):
+            distance = (current_price - sup.price) * 10000
+            print(f"   {i}. {sup.price:.5f} ({distance:.1f} پیپ پایین‌تر)")
+            print(f"      قدرت: {sup.strength*100:.0f}% | برخوردها: {sup.touches}")
+    else:
+        print("   هیچ حمایتی یافت نشد")
+    
+    print("\n🔴 نزدیک‌ترین مقاومت‌ها:")
+    if nearest['resistance']:
+        for i, res in enumerate(nearest['resistance'], 1):
+            distance = (res.price - current_price) * 10000
+            print(f"   {i}. {res.price:.5f} ({distance:.1f} پیپ بالاتر)")
+            print(f"      قدرت: {res.strength*100:.0f}% | برخوردها: {res.touches}")
+    else:
+        print("   هیچ مقاومتی یافت نشد")
+    
+    # ========================================
+    # تست 3: روش Cluster
+    # ========================================
+    print("\n" + "="*60)
+    print("3️⃣ روش CLUSTERING")
+    print("="*60)
+    
+    levels_cluster = detector.find_levels(df, method='cluster', lookback=100)
+    print(f"\n✅ {len(levels_cluster)} cluster یافت شد")
+    
+    for i, level in enumerate(levels_cluster[:5], 1):
+        emoji = "🟢" if level.type == "SUPPORT" else "🔴"
+        print(f"\n{i}. {emoji} {level.price:.5f} ({level.type})")
+        print(f"   قدرت: {level.strength*100:.0f}%")
+    
+    # ========================================
+    # تست 4: سطوح فیبوناچی
+    # ========================================
+    print("\n" + "="*60)
+    print("4️⃣ سطوح فیبوناچی")
+    print("="*60)
+    
+    levels_fib = detector.find_levels(df, method='fibonacci', lookback=100)
+    print(f"\n✅ {len(levels_fib)} سطح فیبوناچی محاسبه شد\n")
+    
+    for level in levels_fib:
+        emoji = "🟢" if level.type == "SUPPORT" else "🔴"
+        distance = abs(level.price - current_price) * 10000
+        print(f"{emoji} {level.price:.5f} ({level.type}) - {distance:.1f} پیپ")
+    
+    # ========================================
+    # تست 5: بررسی نزدیکی به سطح
+    # ========================================
+    print("\n" + "="*60)
+    print("5️⃣ بررسی نزدیکی قیمت به سطح")
+    print("="*60)
+    
+    # بازگشت به pivot levels برای این تست
+    detector.find_levels(df, method='pivot', lookback=100)
+    
+    is_near, level = detector.is_near_level(current_price, threshold=0.0015)
+    
+    if is_near:
+        print(f"\n⚠️ قیمت نزدیک سطح {level.type} است!")
+        print(f"   سطح: {level.price:.5f}")
+        print(f"   قدرت: {level.strength*100:.0f}%")
+        distance = abs(level.price - current_price) * 10000
+        print(f"   فاصله: {distance:.1f} پیپ")
+    else:
+        print(f"\n✅ قیمت دور از سطوح کلیدی است")
+    
+    # ========================================
+    # تست 6: خلاصه کامل
+    # ========================================
+    print("\n" + "="*60)
+    print("6️⃣ خلاصه کامل وضعیت")
+    print("="*60)
+    
+    detector.print_summary(current_price)
+    
+    # ========================================
+    # تست 7: اعداد رند
+    # ========================================
+    print("\n" + "="*60)
+    print("7️⃣ سطوح اعداد رند (Round Numbers)")
+    print("="*60)
+    
+    round_levels = detect_round_numbers(current_price)
+    print(f"\n✅ {len(round_levels)} سطح عدد رند یافت شد\n")
+    
+    for level in round_levels[:5]:
+        emoji = "🟢" if level.type == "SUPPORT" else "🔴"
+        distance = abs(level.price - current_price) * 10000
+        print(f"{emoji} {level.price:.5f} ({distance:.1f} پیپ)")
+    
+    print("\n" + "="*60)
+    print("✅ همه تست‌ها با موفقیت انجام شد!")
+    print("="*60)
+
+
+

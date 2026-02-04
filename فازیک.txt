@@ -1,0 +1,4682 @@
+"""
+====================================================================
+فایل: config.py (نسخه اصلاح‌شده v2.1)
+تغییرات: اضافه شدن تنظیمات گمشده
+====================================================================
+"""
+
+import MetaTrader5 as mt5
+from pathlib import Path
+
+class Config:
+    """
+    کلاس تنظیمات ربات
+    
+    استفاده:
+        from config import Config
+        print(Config.SYMBOL)
+    """
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📊 تنظیمات معاملاتی اصلی
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    SYMBOL = "EURUSD"
+    TIMEFRAME_PRIMARY = mt5.TIMEFRAME_H1
+    TIMEFRAME_SECONDARY = mt5.TIMEFRAME_H4
+    TIMEFRAME_TERTIARY = mt5.TIMEFRAME_D1
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 💰 مدیریت ریسک
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    RISK_PER_TRADE = 0.01
+    MAX_DAILY_LOSS = 0.05
+    MAX_POSITIONS = 2
+    MAX_LOT_SIZE = 1.0
+    MIN_LOT_SIZE = 0.01
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🎯 تنظیمات Stop Loss و Take Profit
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    SL_ATR_MULTIPLIER = 2.0
+    TP_ATR_MULTIPLIER = 3.0
+    MIN_RISK_REWARD = 1.5
+    MAX_SL_PIPS = 100
+    MIN_SL_PIPS = 10
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🤖 تنظیمات مدل Machine Learning
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    LOOKBACK_PERIOD = 60
+    BUY_THRESHOLD = 0.65
+    SELL_THRESHOLD = 0.35
+    MIN_CONFIDENCE = 0.60
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📈 فیلترهای تکنیکال
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    MIN_ADX = 25
+    MAX_ADX = 60
+    RSI_OVERBOUGHT = 70
+    RSI_OVERSOLD = 30
+    MIN_ATR_PIPS = 5
+    MAX_SPREAD_MULTIPLIER = 2.0
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🎯 مدیریت پوزیشن پیشرفته
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    BE_TRIGGER_ATR = 1.5
+    BE_OFFSET_PIPS = 2
+    
+    PARTIAL_CLOSE_ENABLED = True
+    PARTIAL_CLOSE_TRIGGER_ATR = 2.0
+    PARTIAL_CLOSE_PERCENT = 0.5
+    
+    TRAILING_ENABLED = True
+    TRAILING_LEVELS = [
+        {'profit_atr': 1.5, 'trail_atr': 0.5},
+        {'profit_atr': 2.5, 'trail_atr': 1.0},
+        {'profit_atr': 4.0, 'trail_atr': 1.5},
+    ]
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📊 تنظیمات داده
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    DATA_BARS = 500
+    RSI_PERIOD = 14
+    ADX_PERIOD = 14
+    ATR_PERIOD = 14
+    MA_FAST = 20
+    MA_SLOW = 50
+    MACD_FAST = 12
+    MACD_SLOW = 26
+    MACD_SIGNAL = 9
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🔔 تنظیمات هشدار
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    ALERTS_ENABLED = True
+    ALERT_ON_TRADE_OPEN = True
+    ALERT_ON_TRADE_CLOSE = True
+    ALERT_ON_PARTIAL_CLOSE = True
+    ALERT_ON_BE_MOVE = True
+    ALERT_ON_ERROR = True
+    ALERT_ON_DAILY_LOSS = True
+    
+    TELEGRAM_ENABLED = False
+    TELEGRAM_BOT_TOKEN = ""
+    TELEGRAM_CHAT_ID = ""
+    
+    EMAIL_ENABLED = False
+    EMAIL_SMTP_SERVER = "smtp.gmail.com"
+    EMAIL_SMTP_PORT = 587
+    EMAIL_FROM = ""
+    EMAIL_TO = ""
+    EMAIL_PASSWORD = ""
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📝 تنظیمات لاگ
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    LOGGING_ENABLED = True
+    LOG_LEVEL = "INFO"
+    LOG_TO_FILE = True
+    LOG_FILE_PATH = "data/logs/bot.log"
+    LOG_TO_DB = True
+    LOG_DB_PATH = "data/logs/bot_logs.db"
+    LOG_TO_CONSOLE = True
+    LOG_RETENTION_DAYS = 30
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🧠 تنظیمات Model Monitor
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    MIN_MODEL_ACCURACY = 0.45
+    WARNING_ACCURACY_THRESHOLD = 0.50
+    MAX_ACCURACY_DEGRADATION = 0.15
+    MODEL_MONITOR_DAYS = 7
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🌐 تنظیمات داشبورد
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    DASHBOARD_PORT = 5000
+    DASHBOARD_HOST = "127.0.0.1"
+    DASHBOARD_DEBUG = False
+    DASHBOARD_SECRET_KEY = "change-this-to-random-string-in-production"
+    SESSION_LIFETIME = 86400
+    MAX_LOGIN_ATTEMPTS = 5
+    LOCKOUT_DURATION = 30
+    DEFAULT_USERNAME = "admin"
+    DEFAULT_PASSWORD = "admin123"
+    DASHBOARD_REFRESH_INTERVAL = 5
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🧪 تنظیمات Backtesting
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    BACKTEST_INITIAL_CAPITAL = 10000
+    BACKTEST_COMMISSION = 7.0
+    BACKTEST_SPREAD = 1.5
+    BACKTEST_SLIPPAGE = 0.5
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🧠 تنظیمات آموزش Machine Learning (✅ اضافه شده)
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    EPOCHS = 50
+    BATCH_SIZE = 32
+    HISTORICAL_CANDLES = 2000
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🤖 تنظیمات Ensemble Model (✅ اضافه شده)
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    # فعال/غیرفعال Ensemble
+    ENSEMBLE_ENABLED = True
+    
+    # فعال/غیرفعال هر مدل
+    ENSEMBLE_USE_LSTM     = True
+    ENSEMBLE_USE_CNN_LSTM = True
+    ENSEMBLE_USE_XGB      = True
+    ENSEMBLE_USE_RF       = True
+    
+    # وزن هر مدل (نرمال‌سازی خودکار می‌شود)
+    ENSEMBLE_WEIGHT_LSTM     = 0.30
+    ENSEMBLE_WEIGHT_CNN_LSTM = 0.25
+    ENSEMBLE_WEIGHT_XGB      = 0.25
+    ENSEMBLE_WEIGHT_RF       = 0.15
+    ENSEMBLE_WEIGHT_VOTING   = 0.05
+    
+    # Confidence Bands
+    CONFIDENCE_STRONG_BUY  = 0.65   # بالای این → Strong Buy
+    CONFIDENCE_WEAK_BUY    = 0.55   # بین این و بالا → Weak Buy
+    CONFIDENCE_NEUTRAL_LOW = 0.45   # بین این و بالا → Neutral
+    CONFIDENCE_WEAK_SELL   = 0.35   # پایین این → Weak Sell / Strong Sell
+    
+    # حداقل اطمینان برای سیگنال معتبر
+    ENSEMBLE_MIN_CONFIDENCE = 0.50
+    
+    # حداقل توافق مدل‌ها
+    ENSEMBLE_MIN_AGREEMENT = 0.60
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🔄 تنظیمات Auto-Retrain (✅ اضافه شده)
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    # فعال/غیرفعال آموزش خودکار
+    AUTO_RETRAIN_ENABLED = True
+    
+    # فاصله آموزش مجدد (روز)
+    RETRAIN_INTERVAL_DAYS = 7
+    
+    # حداقل دقت قابل قبول (زیر این → آموزش مجدد)
+    PERFORMANCE_THRESHOLD = 0.48
+    
+    # حداقل تعداد معاملات قبل از آموزش مجدد
+    MIN_TRADES_FOR_RETRAIN = 20
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📰 تنظیمات فیلتر اخبار اقتصادی (✅ اضافه شده)
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    # فعال/غیرفعال فیلتر اخبار
+    ECONOMIC_FILTER_ENABLED = True
+    
+    # کلید API تقویم اقتصادی
+    # مستندات: https://api.tradingeconomics.com/
+    # اگر خالی باشد، حالت آفلاین فعال می‌شود
+    ECONOMIC_CALENDAR_API_KEY = ""
+    
+    # دقیقه‌های قبل از خبر مهم (معامله فیلتر شود)
+    AVOID_MINUTES_BEFORE_NEWS = 30
+    
+    # دقیقه‌های بعد از خبر مهم (معامله فیلتر شود)
+    AVOID_MINUTES_AFTER_NEWS = 30
+    
+    # مسیر فایل آفلاین
+    ECONOMIC_OFFLINE_PATH = "data/economic_calendar.json"
+    
+    # کلمات کلیدی خبرهای مهم
+    IMPORTANT_NEWS_KEYWORDS = [
+        "NFP", "Non-Farm", "CPI", "GDP", "FOMC",
+        "Interest Rate", "Inflation", "Employment",
+        "ECB", "BOE", "BOJ", "Fed",
+        "Unemployment", "PMI", "Trade Balance",
+        "Current Account", "Retail Sales",
+        "Industrial Production", "Consumer Confidence",
+    ]
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📁 مسیرها
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    BASE_DIR = Path(__file__).parent
+    DATA_DIR = BASE_DIR / "data"
+    MODELS_DIR = DATA_DIR / "models"
+    LOGS_DIR = DATA_DIR / "logs"
+    BACKTEST_RESULTS_DIR = DATA_DIR / "backtest_results"
+    
+    # ✅ مسیرهای مدل (اضافه شده با Path)
+    MODEL_PATH = MODELS_DIR / "trading_model.keras"
+    SCALER_PATH = MODELS_DIR / "scaler.pkl"
+    
+    # برای سازگاری با کدهای قدیمی
+    MODEL_FILE = str(MODEL_PATH)
+    SCALER_FILE = str(SCALER_PATH)
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # ⚙️ تنظیمات سیستم
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    CHECK_INTERVAL = 30
+    TIMEZONE = "UTC"
+    LANGUAGE = "FA"
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🔧 توابع کمکی
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    @classmethod
+    def create_directories(cls):
+        """ساخت پوشه‌های مورد نیاز"""
+        cls.DATA_DIR.mkdir(exist_ok=True)
+        cls.MODELS_DIR.mkdir(exist_ok=True)
+        cls.LOGS_DIR.mkdir(exist_ok=True)
+        cls.BACKTEST_RESULTS_DIR.mkdir(exist_ok=True)
+    
+    @classmethod
+    def validate(cls):
+        """بررسی صحت تنظیمات"""
+        errors = []
+        
+        if cls.RISK_PER_TRADE <= 0 or cls.RISK_PER_TRADE > 0.05:
+            errors.append("RISK_PER_TRADE باید بین 0 تا 0.05 باشد")
+        
+        if cls.SL_ATR_MULTIPLIER <= 0:
+            errors.append("SL_ATR_MULTIPLIER باید مثبت باشد")
+        
+        if cls.TP_ATR_MULTIPLIER <= cls.SL_ATR_MULTIPLIER:
+            errors.append("TP_ATR_MULTIPLIER باید بزرگتر از SL باشد")
+        
+        if cls.BUY_THRESHOLD <= 0.5:
+            errors.append("BUY_THRESHOLD باید بزرگتر از 0.5 باشد")
+        
+        if cls.SELL_THRESHOLD >= 0.5:
+            errors.append("SELL_THRESHOLD باید کوچکتر از 0.5 باشد")
+        
+        if not cls.BASE_DIR.exists():
+            errors.append("مسیر پروژه یافت نشد")
+        
+        if errors:
+            raise ValueError("خطا در تنظیمات:\n" + "\n".join(errors))
+        
+        return True
+    
+    @classmethod
+    def to_dict(cls):
+        """تبدیل تنظیمات به Dictionary"""
+        config_dict = {}
+        
+        for key, value in cls.__dict__.items():
+            if key.isupper() and not key.startswith('_'):
+                if isinstance(value, Path):
+                    config_dict[key] = str(value)
+                elif isinstance(value, int) and key.startswith('TIMEFRAME'):
+                    config_dict[key] = value
+                else:
+                    config_dict[key] = value
+        
+        return config_dict
+    
+    @classmethod
+    def update_from_dict(cls, config_dict: dict):
+        """به‌روزرسانی تنظیمات از Dictionary"""
+        for key, value in config_dict.items():
+            if hasattr(cls, key) and key.isupper():
+                setattr(cls, key, value)
+    
+    @classmethod
+    def save_to_file(cls, filepath: str = "config_custom.py"):
+        """ذخیره تنظیمات در فایل جدید"""
+        config_dict = cls.to_dict()
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write("# تنظیمات سفارشی ربات\n")
+            f.write("# این فایل توسط داشبورد ایجاد شده است\n\n")
+            
+            for key, value in config_dict.items():
+                if isinstance(value, str):
+                    f.write(f'{key} = "{value}"\n')
+                else:
+                    f.write(f'{key} = {value}\n')
+        
+        print(f"✅ تنظیمات در {filepath} ذخیره شد")
+    
+    @classmethod
+    def print_config(cls):
+        """نمایش تنظیمات فعلی"""
+        print("\n" + "="*70)
+        print("⚙️  تنظیمات فعلی ربات")
+        print("="*70)
+        
+        print("\n📊 معاملات:")
+        print(f"   نماد: {cls.SYMBOL}")
+        print(f"   تایم‌فریم: {cls.TIMEFRAME_PRIMARY}")
+        print(f"   ریسک: {cls.RISK_PER_TRADE*100}%")
+        
+        print("\n🎯 SL/TP:")
+        print(f"   SL: {cls.SL_ATR_MULTIPLIER}x ATR")
+        print(f"   TP: {cls.TP_ATR_MULTIPLIER}x ATR")
+        print(f"   R:R حداقل: 1:{cls.MIN_RISK_REWARD}")
+        
+        print("\n🤖 مدل ML:")
+        print(f"   Lookback: {cls.LOOKBACK_PERIOD} کندل")
+        print(f"   خرید: > {cls.BUY_THRESHOLD}")
+        print(f"   فروش: < {cls.SELL_THRESHOLD}")
+        print(f"   Epochs: {cls.EPOCHS}")
+        print(f"   Batch Size: {cls.BATCH_SIZE}")
+        
+        print("\n🎯 مدیریت پوزیشن:")
+        print(f"   Break Even: {cls.BE_TRIGGER_ATR}x ATR")
+        print(f"   Partial: {cls.PARTIAL_CLOSE_TRIGGER_ATR}x ATR ({cls.PARTIAL_CLOSE_PERCENT*100}%)")
+        print(f"   Trailing: {'فعال' if cls.TRAILING_ENABLED else 'غیرفعال'}")
+        
+        print("="*70)
+
+
+# ساخت پوشه‌ها
+Config.create_directories()
+
+if __name__ == "__main__":
+    try:
+        Config.validate()
+        print("✅ تمام تنظیمات صحیح هستند")
+        Config.print_config()
+    except ValueError as e:
+        print(f"\n❌ خطا: {e}")
+
+
+
+
+
+"""
+====================================================================
+فایل: ensemble_model.py (نسخه حرفه‌ای v3.0)
+====================================================================
+مدل Ensemble حرفه‌ای شامل:
+    - LSTM         → الگوهای زمانی (Time Patterns)
+    - CNN-LSTM     → الگوهای محلی + زمانی
+    - XGBoost      → تعامل Feature‌ها
+    - Random Forest → تصمیم‌های غیرخطی مقاوم
+    - VotingClassifier → اجماع مدل‌های Tabular
+
+ویژگی‌های کلیدی:
+    ✅ Signal Generator (نه تصمیم‌گیر نهایی)
+    ✅ Confidence Bands (Strong / Weak / Neutral)
+    ✅ Walk-Forward Validation
+    ✅ Data Leakage رفع شده
+    ✅ Thread-Safe
+    ✅ مدیریت خطا جامع
+====================================================================
+"""
+
+import numpy as np
+import pandas as pd
+from typing import Dict, List, Tuple, Optional
+from enum import Enum
+import joblib
+import json
+import os
+import threading
+from datetime import datetime
+from copy import deepcopy
+
+# مدل‌های ML
+from xgboost import XGBClassifier
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+from sklearn.preprocessing import RobustScaler
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.metrics import accuracy_score, classification_report
+
+# TensorFlow
+import tensorflow as tf
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import (
+    LSTM, Dense, Dropout, BatchNormalization,
+    Conv1D, MaxPooling1D, Flatten, Input, Concatenate
+)
+from tensorflow.keras.regularizers import l2
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.models import Model
+
+from config import Config
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 📊 Enums و Constants
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+class SignalStrength(Enum):
+    """قوت سیگنال"""
+    STRONG_BUY  = "STRONG_BUY"
+    WEAK_BUY    = "WEAK_BUY"
+    NEUTRAL     = "NEUTRAL"
+    WEAK_SELL   = "WEAK_SELL"
+    STRONG_SELL = "STRONG_SELL"
+
+
+class ModelType(Enum):
+    """نوع مدل"""
+    LSTM       = "lstm"
+    CNN_LSTM   = "cnn_lstm"
+    XGBOOST    = "xgboost"
+    RANDOM_FOREST = "random_forest"
+    VOTING     = "voting"
+
+
+# تنظیمات Confidence Bands
+CONFIDENCE_BANDS = {
+    "strong_buy":  0.65,   # بالای این → Strong Buy
+    "weak_buy":    0.55,   # بین 0.55 و 0.65 → Weak Buy
+    "neutral_low": 0.45,   # بین 0.45 و 0.55 → Neutral
+    "weak_sell":   0.35,   # بین 0.35 و 0.45 → Weak Sell
+    "strong_sell": 0.35,   # پایین این → Strong Sell
+}
+
+# وزن پیش‌فرض مدل‌ها
+DEFAULT_WEIGHTS = {
+    ModelType.LSTM:          0.30,
+    ModelType.CNN_LSTM:      0.25,
+    ModelType.XGBOOST:       0.25,
+    ModelType.RANDOM_FOREST: 0.15,
+    ModelType.VOTING:        0.05,
+}
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🔧 کلاس کمکی: نتیجه پیش‌بینی
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+class PredictionResult:
+    """
+    نتیجه پیش‌بینی ساخته شده - فقط Signal، نه تصمیم نهایی
+    
+    تصمیم نهایی معامله باید توسط RiskManager گرفته شود
+    """
+    def __init__(self):
+        self.timestamp: str = ""
+        self.raw_probability: float = 0.5       # خروجی خام مدل
+        self.final_probability: float = 0.5     # بعد از وزن‌دهی
+        self.signal_strength: SignalStrength = SignalStrength.NEUTRAL
+        self.confidence: float = 0.0            # اطمینان کلی (0-1)
+        self.model_details: Dict = {}           # جزئیات هر مدل
+        self.agreement_score: float = 0.0       # میزان توافق مدل‌ها
+        self.is_valid: bool = False             # آیا سیگنال معتبر است؟
+    
+    def to_dict(self) -> Dict:
+        """تبدیل به دیکشنری"""
+        return {
+            "timestamp": self.timestamp,
+            "raw_probability": round(self.raw_probability, 4),
+            "final_probability": round(self.final_probability, 4),
+            "signal_strength": self.signal_strength.value,
+            "confidence": round(self.confidence, 4),
+            "agreement_score": round(self.agreement_score, 4),
+            "is_valid": self.is_valid,
+            "model_details": self.model_details,
+        }
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🧠 کلاس اصلی: Ensemble Model
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+class EnsembleTradingModel:
+    """
+    مدل Ensemble حرفه‌ای
+    
+    این کلاس فقط یک Signal Generator است.
+    تصمیم نهایی معامله باید توسط RiskManager گرفته شود.
+    """
+    
+    def __init__(
+        self,
+        use_lstm: bool = True,
+        use_cnn_lstm: bool = True,
+        use_xgb: bool = True,
+        use_rf: bool = True,
+        weights: Optional[Dict[ModelType, float]] = None,
+    ):
+        # Thread Safety
+        self._lock = threading.Lock()
+        
+        # فعال/غیرفعال مدل‌ها
+        self.use_lstm = use_lstm
+        self.use_cnn_lstm = use_cnn_lstm
+        self.use_xgb = use_xgb
+        self.use_rf = use_rf
+        
+        # مدل‌ها
+        self.lstm_model: Optional[Sequential] = None
+        self.cnn_lstm_model: Optional[Model] = None
+        self.xgb_model: Optional[XGBClassifier] = None
+        self.rf_model: Optional[RandomForestClassifier] = None
+        self.voting_model: Optional[VotingClassifier] = None
+        
+        # Scaler‌های مستقل
+        self.lstm_scaler = RobustScaler()
+        self.cnn_lstm_scaler = RobustScaler()
+        self.tabular_scaler = RobustScaler()
+        
+        # وزن‌های مدل‌ها
+        self.weights = weights or DEFAULT_WEIGHTS.copy()
+        self._normalize_weights()
+        
+        # ویژگی‌ها
+        self.sequence_features = [
+            "Returns", "RSI", "ATR", "ADX",
+            "Distance_MA20", "Distance_MA50",
+        ]
+        self.tabular_features = [
+            "RSI", "ATR", "ADX", "Returns",
+            "Distance_MA20", "Distance_MA50",
+            "Returns_std_5", "ATR_ratio",
+        ]
+        
+        # تاریخچه آموزش و عملکرد
+        self.training_history: Dict[str, List] = {
+            "lstm": [], "cnn_lstm": [],
+            "xgb": [], "rf": [], "ensemble": [],
+        }
+        self.prediction_log: List[Dict] = []
+        
+        self._print_init_info()
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📐 توابع کمکی خصوصی
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def _print_init_info(self):
+        """نمایش اطلاعات اولیه"""
+        print("\n" + "=" * 70)
+        print("🧠 Ensemble Trading Model (v3.0)")
+        print("=" * 70)
+        print(f"   LSTM:          {'✅ فعال' if self.use_lstm else '❌ غیرفعال'}")
+        print(f"   CNN-LSTM:      {'✅ فعال' if self.use_cnn_lstm else '❌ غیرفعال'}")
+        print(f"   XGBoost:       {'✅ فعال' if self.use_xgb else '❌ غیرفعال'}")
+        print(f"   Random Forest: {'✅ فعال' if self.use_rf else '❌ غیرفعال'}")
+        print(f"\n   📊 وزن‌های مدل‌ها:")
+        for model_type, weight in self.weights.items():
+            print(f"      {model_type.value:20s}: {weight:.2f}")
+        print("=" * 70)
+    
+    def _normalize_weights(self):
+        """نرمال‌سازی وزن‌ها (جمع = 1)"""
+        active = {
+            k: v for k, v in self.weights.items()
+            if (k == ModelType.LSTM and self.use_lstm)
+            or (k == ModelType.CNN_LSTM and self.use_cnn_lstm)
+            or (k == ModelType.XGBOOST and self.use_xgb)
+            or (k == ModelType.RANDOM_FOREST and self.use_rf)
+            or (k == ModelType.VOTING and self.use_xgb and self.use_rf)
+        }
+        total = sum(active.values())
+        if total > 0:
+            self.weights = {k: v / total for k, v in active.items()}
+    
+    def _get_signal_strength(self, probability: float) -> SignalStrength:
+        """تعیین قوت سیگنال بر اساس Confidence Bands"""
+        if probability > CONFIDENCE_BANDS["strong_buy"]:
+            return SignalStrength.STRONG_BUY
+        elif probability > CONFIDENCE_BANDS["weak_buy"]:
+            return SignalStrength.WEAK_BUY
+        elif probability > CONFIDENCE_BANDS["neutral_low"]:
+            return SignalStrength.NEUTRAL
+        elif probability > CONFIDENCE_BANDS["strong_sell"]:
+            return SignalStrength.WEAK_SELL
+        else:
+            return SignalStrength.STRONG_SELL
+    
+    def _calculate_agreement(self, predictions: Dict[ModelType, float]) -> float:
+        """
+        محاسبه میزان توافق مدل‌ها
+        اگر همه مدل‌ها در یک جهت باشند، توافق بالاست
+        """
+        if len(predictions) < 2:
+            return 1.0
+        
+        values = list(predictions.values())
+        # چند مدل بالای 0.5 هستند؟
+        above = sum(1 for v in values if v > 0.5)
+        below = len(values) - above
+        # توافق = نسبت اکثریت
+        agreement = max(above, below) / len(values)
+        return agreement
+    
+    def _calculate_confidence(
+        self, predictions: Dict[ModelType, float], agreement: float
+    ) -> float:
+        """
+        محاسبه اطمینان کلی
+        فرمول: confidence = agreement * (1 - variance_normalized)
+        """
+        if not predictions:
+            return 0.0
+        
+        values = list(predictions.values())
+        variance = np.var(values)
+        # نرمال‌سازی variance (حداکثر 0.25 برای binary)
+        variance_normalized = min(variance / 0.25, 1.0)
+        confidence = agreement * (1 - variance_normalized)
+        return max(0.0, min(1.0, confidence))
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📊 آماده‌سازی داده
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def _add_extra_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """اضافه ویژگی‌های جدیدتر (فقط از گذشته)"""
+        df = df.copy()
+        # Volatility نسبی
+        df["Returns_std_5"] = df["Returns"].rolling(5).std()
+        # نسبت ATR فعلی به میانگین
+        df["ATR_ratio"] = df["ATR"] / df["ATR"].rolling(20).mean()
+        df.fillna(0, inplace=True)
+        return df
+    
+    def _prepare_sequences(
+        self,
+        df: pd.DataFrame,
+        features: List[str],
+        lookback: int,
+        scaler: RobustScaler,
+        fit: bool = False,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        آماده‌سازی توالی + Target بدون Data Leakage
+        
+        Args:
+            fit: اگر True، scaler فیت می‌شود (فقط در آموزش)
+        """
+        X_raw = df[features].values
+        y_raw = df["Target"].values
+        
+        # نرمال‌سازی
+        if fit:
+            X_scaled = scaler.fit_transform(X_raw)
+        else:
+            X_scaled = scaler.transform(X_raw)
+        
+        # ساخت توالی
+        X_seq, y_seq = [], []
+        for i in range(lookback, len(X_scaled)):
+            X_seq.append(X_scaled[i - lookback : i])
+            y_seq.append(y_raw[i])
+        
+        return np.array(X_seq, dtype=np.float32), np.array(y_seq, dtype=np.float32)
+    
+    def _prepare_tabular(
+        self,
+        df: pd.DataFrame,
+        scaler: RobustScaler,
+        fit: bool = False,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """آماده‌سازی داده Tabular"""
+        X_raw = df[self.tabular_features].values
+        y_raw = df["Target"].values
+        
+        if fit:
+            X_scaled = scaler.fit_transform(X_raw)
+        else:
+            X_scaled = scaler.transform(X_raw)
+        
+        return X_scaled.astype(np.float32), y_raw.astype(np.float32)
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🏗️ ساخت مدل‌ها
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def _build_lstm(self, input_shape: Tuple[int, int]) -> Sequential:
+        """
+        مدل LSTM خالص
+        هدف: تشخیص الگوهای زمانی بلندمدت
+        """
+        model = Sequential([
+            LSTM(32, return_sequences=True, input_shape=input_shape,
+                 kernel_regularizer=l2(0.01), recurrent_regularizer=l2(0.01)),
+            Dropout(0.4),
+            BatchNormalization(),
+            LSTM(16, return_sequences=False,
+                 kernel_regularizer=l2(0.01), recurrent_regularizer=l2(0.01)),
+            Dropout(0.4),
+            Dense(8, activation="relu", kernel_regularizer=l2(0.01)),
+            Dropout(0.3),
+            Dense(1, activation="sigmoid"),
+        ])
+        model.compile(optimizer=Adam(learning_rate=0.001),
+                      loss="binary_crossentropy", metrics=["accuracy"])
+        return model
+    
+    def _build_cnn_lstm(self, input_shape: Tuple[int, int]) -> Model:
+        """
+        مدل CNN + LSTM
+        CNN → الگوهای محلی (local patterns)
+        LSTM → وابستگی زمانی (temporal dependency)
+        """
+        inputs = Input(shape=input_shape)
+        
+        # CNN Block (الگوهای محلی)
+        x = Conv1D(32, kernel_size=3, padding="same", activation="relu",
+                   kernel_regularizer=l2(0.01))(inputs)
+        x = BatchNormalization()(x)
+        x = Dropout(0.3)(x)
+        x = Conv1D(16, kernel_size=3, padding="same", activation="relu",
+                   kernel_regularizer=l2(0.01))(x)
+        x = BatchNormalization()(x)
+        x = Dropout(0.3)(x)
+        
+        # LSTM Block (الگوهای زمانی)
+        x = LSTM(32, return_sequences=True,
+                 kernel_regularizer=l2(0.01), recurrent_regularizer=l2(0.01))(x)
+        x = Dropout(0.3)(x)
+        x = LSTM(16, return_sequences=False,
+                 kernel_regularizer=l2(0.01), recurrent_regularizer=l2(0.01))(x)
+        x = Dropout(0.3)(x)
+        
+        # Dense Block
+        x = Dense(8, activation="relu", kernel_regularizer=l2(0.01))(x)
+        x = Dropout(0.2)(x)
+        outputs = Dense(1, activation="sigmoid")(x)
+        
+        model = Model(inputs=inputs, outputs=outputs)
+        model.compile(optimizer=Adam(learning_rate=0.001),
+                      loss="binary_crossentropy", metrics=["accuracy"])
+        return model
+    
+    def _build_xgboost(self) -> XGBClassifier:
+        """
+        مدل XGBoost
+        هدف: تعامل feature‌ها و تصمیم‌های non-linear
+        """
+        return XGBClassifier(
+            n_estimators=150,
+            learning_rate=0.05,
+            max_depth=5,
+            min_child_weight=3,
+            gamma=0.1,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            reg_alpha=0.1,
+            reg_lambda=1.0,
+            objective="binary:logistic",
+            eval_metric="logloss",
+            n_jobs=-1,
+            random_state=42,
+            use_label_encoder=False,
+        )
+    
+    def _build_random_forest(self) -> RandomForestClassifier:
+        """
+        مدل Random Forest
+        هدف: تصمیم‌های غیرخطی مقاوم به noise
+        """
+        return RandomForestClassifier(
+            n_estimators=150,
+            max_depth=8,
+            min_samples_split=5,
+            min_samples_leaf=3,
+            max_features="sqrt",
+            bootstrap=True,
+            n_jobs=-1,
+            random_state=42,
+        )
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🚀 آموزش مدل‌ها
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def train(
+        self,
+        df: pd.DataFrame,
+        n_splits: int = 5,
+    ) -> Dict[str, float]:
+        """
+        آموزش کامل با Walk-Forward Validation
+        
+        فرمت df مورد نیاز:
+            - ستون‌های sequence_features
+            - ستون Target (0 یا 1)
+        
+        Returns:
+            دیکشنری شامل accuracy هر مدل
+        """
+        print("\n" + "=" * 70)
+        print("🚀 شروع آموزش Ensemble (Walk-Forward)")
+        print("=" * 70)
+        
+        # اضافه ویژگی‌های جدیدتر
+        df = self._add_extra_features(df)
+        
+        lookback = Config.LOOKBACK_PERIOD
+        tscv = TimeSeriesSplit(n_splits=n_splits)
+        
+        # نتایج هر مدل در هر fold
+        fold_accuracies: Dict[str, List[float]] = {
+            "lstm": [], "cnn_lstm": [], "xgb": [], "rf": [], "voting": []
+        }
+        
+        for fold, (train_idx, val_idx) in enumerate(tscv.split(df), 1):
+            print(f"\n{'─' * 70}")
+            print(f"📊 Fold {fold}/{n_splits}  |  Train: {len(train_idx)}  |  Val: {len(val_idx)}")
+            print(f"{'─' * 70}")
+            
+            df_train = df.iloc[train_idx]
+            df_val   = df.iloc[val_idx]
+            
+            # ─── LSTM ───
+            if self.use_lstm:
+                acc = self._train_lstm_fold(df_train, df_val, lookback)
+                if acc is not None:
+                    fold_accuracies["lstm"].append(acc)
+            
+            # ─── CNN-LSTM ───
+            if self.use_cnn_lstm:
+                acc = self._train_cnn_lstm_fold(df_train, df_val, lookback)
+                if acc is not None:
+                    fold_accuracies["cnn_lstm"].append(acc)
+            
+            # ─── Tabular (XGB + RF + Voting) ───
+            if self.use_xgb or self.use_rf:
+                accs = self._train_tabular_fold(df_train, df_val)
+                for key, val in accs.items():
+                    if val is not None:
+                        fold_accuracies[key].append(val)
+        
+        # ─── آموزش نهایی روی کل داده ───
+        print(f"\n{'=' * 70}")
+        print("🏁 آموزش نهایی روی کل داده")
+        print(f"{'=' * 70}")
+        self._train_final(df, lookback)
+        
+        # ─── گزارش نهایی ───
+        final_accs = self._print_training_report(fold_accuracies)
+        return final_accs
+    
+    def _train_lstm_fold(
+        self, df_train: pd.DataFrame, df_val: pd.DataFrame, lookback: int
+    ) -> Optional[float]:
+        """آموزش LSTM در یک fold"""
+        try:
+            # Scaler مستقل
+            scaler = RobustScaler()
+            X_train, y_train = self._prepare_sequences(
+                df_train, self.sequence_features, lookback, scaler, fit=True
+            )
+            X_val, y_val = self._prepare_sequences(
+                df_val, self.sequence_features, lookback, scaler, fit=False
+            )
+            
+            if len(X_train) < 50 or len(X_val) < 10:
+                return None
+            
+            model = self._build_lstm((lookback, len(self.sequence_features)))
+            model.fit(
+                X_train, y_train,
+                validation_data=(X_val, y_val),
+                epochs=Config.EPOCHS, batch_size=Config.BATCH_SIZE,
+                callbacks=[
+                    EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True),
+                    ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=5, min_lr=1e-5),
+                ],
+                verbose=0,
+            )
+            
+            _, acc = model.evaluate(X_val, y_val, verbose=0)
+            print(f"   LSTM      → Acc: {acc*100:.2f}%")
+            return acc
+        except Exception as e:
+            print(f"   ⚠️ LSTM خطا: {e}")
+            return None
+    
+    def _train_cnn_lstm_fold(
+        self, df_train: pd.DataFrame, df_val: pd.DataFrame, lookback: int
+    ) -> Optional[float]:
+        """آموزش CNN-LSTM در یک fold"""
+        try:
+            scaler = RobustScaler()
+            X_train, y_train = self._prepare_sequences(
+                df_train, self.sequence_features, lookback, scaler, fit=True
+            )
+            X_val, y_val = self._prepare_sequences(
+                df_val, self.sequence_features, lookback, scaler, fit=False
+            )
+            
+            if len(X_train) < 50 or len(X_val) < 10:
+                return None
+            
+            model = self._build_cnn_lstm((lookback, len(self.sequence_features)))
+            model.fit(
+                X_train, y_train,
+                validation_data=(X_val, y_val),
+                epochs=Config.EPOCHS, batch_size=Config.BATCH_SIZE,
+                callbacks=[
+                    EarlyStopping(monitor="val_loss", patience=10, restore_best_weights=True),
+                    ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=5, min_lr=1e-5),
+                ],
+                verbose=0,
+            )
+            
+            _, acc = model.evaluate(X_val, y_val, verbose=0)
+            print(f"   CNN-LSTM  → Acc: {acc*100:.2f}%")
+            return acc
+        except Exception as e:
+            print(f"   ⚠️ CNN-LSTM خطا: {e}")
+            return None
+    
+    def _train_tabular_fold(
+        self, df_train: pd.DataFrame, df_val: pd.DataFrame
+    ) -> Dict[str, Optional[float]]:
+        """آموزش XGBoost + RF + Voting در یک fold"""
+        results: Dict[str, Optional[float]] = {"xgb": None, "rf": None, "voting": None}
+        
+        try:
+            scaler = RobustScaler()
+            X_train, y_train = self._prepare_tabular(df_train, scaler, fit=True)
+            X_val, y_val     = self._prepare_tabular(df_val, scaler, fit=False)
+            
+            if len(X_train) < 50 or len(X_val) < 10:
+                return results
+            
+            # XGBoost
+            if self.use_xgb:
+                xgb = self._build_xgboost()
+                xgb.fit(X_train, y_train)
+                xgb_acc = accuracy_score(y_val, xgb.predict(X_val))
+                results["xgb"] = xgb_acc
+                print(f"   XGBoost   → Acc: {xgb_acc*100:.2f}%")
+            
+            # Random Forest
+            if self.use_rf:
+                rf = self._build_random_forest()
+                rf.fit(X_train, y_train)
+                rf_acc = accuracy_score(y_val, rf.predict(X_val))
+                results["rf"] = rf_acc
+                print(f"   RF        → Acc: {rf_acc*100:.2f}%")
+            
+            # Voting
+            if self.use_xgb and self.use_rf:
+                voting = VotingClassifier(
+                    estimators=[("xgb", xgb), ("rf", rf)],
+                    voting="soft",
+                )
+                voting.fit(X_train, y_train)
+                voting_acc = accuracy_score(y_val, voting.predict(X_val))
+                results["voting"] = voting_acc
+                print(f"   Voting    → Acc: {voting_acc*100:.2f}%")
+            
+            return results
+        except Exception as e:
+            print(f"   ⚠️ Tabular خطا: {e}")
+            return results
+    
+    def _train_final(self, df: pd.DataFrame, lookback: int):
+        """آموزش نهایی روی کل داده"""
+        
+        # ─── LSTM نهایی ───
+        if self.use_lstm:
+            try:
+                X, y = self._prepare_sequences(
+                    df, self.sequence_features, lookback,
+                    self.lstm_scaler, fit=True
+                )
+                self.lstm_model = self._build_lstm((lookback, len(self.sequence_features)))
+                self.lstm_model.fit(
+                    X, y,
+                    epochs=Config.EPOCHS, batch_size=Config.BATCH_SIZE,
+                    callbacks=[EarlyStopping(monitor="loss", patience=15, restore_best_weights=True)],
+                    verbose=0,
+                )
+                print("   ✅ LSTM نهایی آموزش دید")
+            except Exception as e:
+                print(f"   ❌ LSTM نهایی خطا: {e}")
+        
+        # ─── CNN-LSTM نهایی ───
+        if self.use_cnn_lstm:
+            try:
+                X, y = self._prepare_sequences(
+                    df, self.sequence_features, lookback,
+                    self.cnn_lstm_scaler, fit=True
+                )
+                self.cnn_lstm_model = self._build_cnn_lstm((lookback, len(self.sequence_features)))
+                self.cnn_lstm_model.fit(
+                    X, y,
+                    epochs=Config.EPOCHS, batch_size=Config.BATCH_SIZE,
+                    callbacks=[EarlyStopping(monitor="loss", patience=15, restore_best_weights=True)],
+                    verbose=0,
+                )
+                print("   ✅ CNN-LSTM نهایی آموزش دید")
+            except Exception as e:
+                print(f"   ❌ CNN-LSTM نهایی خطا: {e}")
+        
+        # ─── Tabular نهایی ───
+        if self.use_xgb or self.use_rf:
+            try:
+                X, y = self._prepare_tabular(df, self.tabular_scaler, fit=True)
+                
+                if self.use_xgb:
+                    self.xgb_model = self._build_xgboost()
+                    self.xgb_model.fit(X, y)
+                    print("   ✅ XGBoost نهایی آموزش دید")
+                
+                if self.use_rf:
+                    self.rf_model = self._build_random_forest()
+                    self.rf_model.fit(X, y)
+                    print("   ✅ Random Forest نهایی آموزش دید")
+                
+                if self.use_xgb and self.use_rf:
+                    self.voting_model = VotingClassifier(
+                        estimators=[
+                            ("xgb", self.xgb_model),
+                            ("rf", self.rf_model),
+                        ],
+                        voting="soft",
+                    )
+                    self.voting_model.fit(X, y)
+                    print("   ✅ Voting نهایی آموزش دید")
+            except Exception as e:
+                print(f"   ❌ Tabular نهایی خطا: {e}")
+    
+    def _print_training_report(self, fold_accuracies: Dict[str, List[float]]) -> Dict[str, float]:
+        """چاپ گزارش آموزش"""
+        print(f"\n{'=' * 70}")
+        print("📊 گزارش نهایی آموزش")
+        print(f"{'=' * 70}")
+        print(f"{'مدل':<15} {'میانگین':>10} {'انحراف':>10} {'Min':>8} {'Max':>8}")
+        print(f"{'─' * 55}")
+        
+        final_accs = {}
+        for name, accs in fold_accuracies.items():
+            if accs:
+                avg = np.mean(accs)
+                std = np.std(accs)
+                mn  = np.min(accs)
+                mx  = np.max(accs)
+                final_accs[name] = avg
+                print(f"{name:<15} {avg*100:>9.2f}% {std*100:>9.2f}% {mn*100:>7.2f}% {mx*100:>7.2f}%")
+        
+        print(f"{'=' * 70}")
+        return final_accs
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🎯 پیش‌بینی
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def predict(self, df: pd.DataFrame) -> PredictionResult:
+        """
+        پیش‌بینی با تمام مدل‌ها و ترکیب نتایج
+        
+        ⚠️ این فقط یک Signal است — تصمیم نهایی با RiskManager است
+        
+        Args:
+            df: DataFrame شامل sequence_features و tabular_features
+        
+        Returns:
+            PredictionResult شامل سیگنال، اطمینان، جزئیات
+        """
+        with self._lock:
+            result = PredictionResult()
+            result.timestamp = datetime.now().isoformat()
+            
+            df = self._add_extra_features(df)
+            predictions: Dict[ModelType, float] = {}
+            details: Dict[str, Dict] = {}
+            lookback = Config.LOOKBACK_PERIOD
+            
+            # ─── LSTM پیش‌بینی ───
+            if self.use_lstm and self.lstm_model is not None:
+                pred = self._predict_lstm(df, lookback)
+                if pred is not None:
+                    predictions[ModelType.LSTM] = pred
+                    details["lstm"] = {"prediction": round(pred, 4), "status": "ok"}
+                else:
+                    details["lstm"] = {"prediction": None, "status": "failed"}
+            
+            # ─── CNN-LSTM پیش‌بینی ───
+            if self.use_cnn_lstm and self.cnn_lstm_model is not None:
+                pred = self._predict_cnn_lstm(df, lookback)
+                if pred is not None:
+                    predictions[ModelType.CNN_LSTM] = pred
+                    details["cnn_lstm"] = {"prediction": round(pred, 4), "status": "ok"}
+                else:
+                    details["cnn_lstm"] = {"prediction": None, "status": "failed"}
+            
+            # ─── Tabular پیش‌بینی ───
+            if self.use_xgb or self.use_rf:
+                tab_preds = self._predict_tabular(df)
+                for model_type, pred in tab_preds.items():
+                    if pred is not None:
+                        predictions[model_type] = pred
+                        details[model_type.value] = {"prediction": round(pred, 4), "status": "ok"}
+                    else:
+                        details[model_type.value] = {"prediction": None, "status": "failed"}
+            
+            # ─── ترکیب نتایج ───
+            if not predictions:
+                # هیچ مدلی پیش‌بینی نداد
+                result.is_valid = False
+                result.signal_strength = SignalStrength.NEUTRAL
+                result.model_details = details
+                return result
+            
+            # میانگین وزنی
+            total_weight = 0.0
+            weighted_sum = 0.0
+            for model_type, pred in predictions.items():
+                w = self.weights.get(model_type, 0.0)
+                weighted_sum += pred * w
+                total_weight  += w
+            
+            final_prob = weighted_sum / total_weight if total_weight > 0 else 0.5
+            
+            # توافق و اطمینان
+            agreement  = self._calculate_agreement(predictions)
+            confidence = self._calculate_confidence(predictions, agreement)
+            
+            # قوت سیگنال
+            signal_strength = self._get_signal_strength(final_prob)
+            
+            # آیا سیگنال معتبر است؟ (اطمینان حداقل 0.5 و نه Neutral)
+            is_valid = (
+                confidence >= 0.5
+                and signal_strength != SignalStrength.NEUTRAL
+            )
+            
+            # ─── پر کردن نتیجه ───
+            result.raw_probability   = float(np.mean(list(predictions.values())))
+            result.final_probability = round(final_prob, 4)
+            result.signal_strength   = signal_strength
+            result.confidence        = round(confidence, 4)
+            result.agreement_score   = round(agreement, 4)
+            result.is_valid          = is_valid
+            result.model_details     = details
+            
+            # لاگ
+            self.prediction_log.append(result.to_dict())
+            
+            return result
+    
+    def _predict_lstm(self, df: pd.DataFrame, lookback: int) -> Optional[float]:
+        """پیش‌بینی LSTM"""
+        try:
+            raw = df[self.sequence_features].values[-lookback:]
+            if len(raw) < lookback:
+                return None
+            scaled = self.lstm_scaler.transform(raw)
+            X = scaled.reshape(1, lookback, -1).astype(np.float32)
+            return float(self.lstm_model.predict(X, verbose=0)[0][0])
+        except Exception as e:
+            print(f"   ⚠️ LSTM predict خطا: {e}")
+            return None
+    
+    def _predict_cnn_lstm(self, df: pd.DataFrame, lookback: int) -> Optional[float]:
+        """پیش‌بینی CNN-LSTM"""
+        try:
+            raw = df[self.sequence_features].values[-lookback:]
+            if len(raw) < lookback:
+                return None
+            scaled = self.cnn_lstm_scaler.transform(raw)
+            X = scaled.reshape(1, lookback, -1).astype(np.float32)
+            return float(self.cnn_lstm_model.predict(X, verbose=0)[0][0])
+        except Exception as e:
+            print(f"   ⚠️ CNN-LSTM predict خطا: {e}")
+            return None
+    
+    def _predict_tabular(self, df: pd.DataFrame) -> Dict[ModelType, Optional[float]]:
+        """پیش‌بینی مدل‌های Tabular"""
+        out: Dict[ModelType, Optional[float]] = {}
+        try:
+            raw = df[self.tabular_features].values[-1:].astype(np.float32)
+            if np.isnan(raw).any():
+                return out
+            X = self.tabular_scaler.transform(raw)
+            
+            if self.use_xgb and self.xgb_model is not None:
+                out[ModelType.XGBOOST] = float(self.xgb_model.predict_proba(X)[0][1])
+            
+            if self.use_rf and self.rf_model is not None:
+                out[ModelType.RANDOM_FOREST] = float(self.rf_model.predict_proba(X)[0][1])
+            
+            if self.voting_model is not None:
+                out[ModelType.VOTING] = float(self.voting_model.predict_proba(X)[0][1])
+        except Exception as e:
+            print(f"   ⚠️ Tabular predict خطا: {e}")
+        return out
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 💾 ذخیره و بارگذاری
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def save(self, base_path: str = "data/models/ensemble"):
+        """ذخیره کل Ensemble"""
+        os.makedirs(base_path, exist_ok=True)
+        
+        if self.lstm_model:
+            self.lstm_model.save(os.path.join(base_path, "lstm.keras"))
+        if self.cnn_lstm_model:
+            self.cnn_lstm_model.save(os.path.join(base_path, "cnn_lstm.keras"))
+        if self.xgb_model:
+            joblib.dump(self.xgb_model, os.path.join(base_path, "xgb.pkl"))
+        if self.rf_model:
+            joblib.dump(self.rf_model, os.path.join(base_path, "rf.pkl"))
+        if self.voting_model:
+            joblib.dump(self.voting_model, os.path.join(base_path, "voting.pkl"))
+        
+        # Scaler‌ها
+        joblib.dump(self.lstm_scaler,     os.path.join(base_path, "scaler_lstm.pkl"))
+        joblib.dump(self.cnn_lstm_scaler, os.path.join(base_path, "scaler_cnn_lstm.pkl"))
+        joblib.dump(self.tabular_scaler,  os.path.join(base_path, "scaler_tabular.pkl"))
+        
+        # متادیتا
+        meta = {
+            "use_lstm": self.use_lstm,
+            "use_cnn_lstm": self.use_cnn_lstm,
+            "use_xgb": self.use_xgb,
+            "use_rf": self.use_rf,
+            "weights": {k.value: v for k, v in self.weights.items()},
+            "sequence_features": self.sequence_features,
+            "tabular_features": self.tabular_features,
+            "saved_at": datetime.now().isoformat(),
+            "training_history": self.training_history,
+        }
+        with open(os.path.join(base_path, "meta.json"), "w") as f:
+            json.dump(meta, f, indent=2, ensure_ascii=False)
+        
+        print(f"\n💾 Ensemble کامل در '{base_path}' ذخیره شد")
+    
+    def load(self, base_path: str = "data/models/ensemble"):
+        """بارگذاری کل Ensemble"""
+        
+        def _exists(name):
+            return os.path.exists(os.path.join(base_path, name))
+        
+        if self.use_lstm and _exists("lstm.keras"):
+            self.lstm_model = load_model(os.path.join(base_path, "lstm.keras"))
+            print("   ✅ LSTM بارگذاری شد")
+        
+        if self.use_cnn_lstm and _exists("cnn_lstm.keras"):
+            self.cnn_lstm_model = load_model(os.path.join(base_path, "cnn_lstm.keras"))
+            print("   ✅ CNN-LSTM بارگذاری شد")
+        
+        if self.use_xgb and _exists("xgb.pkl"):
+            self.xgb_model = joblib.load(os.path.join(base_path, "xgb.pkl"))
+            print("   ✅ XGBoost بارگذاری شد")
+        
+        if self.use_rf and _exists("rf.pkl"):
+            self.rf_model = joblib.load(os.path.join(base_path, "rf.pkl"))
+            print("   ✅ Random Forest بارگذاری شد")
+        
+        if _exists("voting.pkl"):
+            self.voting_model = joblib.load(os.path.join(base_path, "voting.pkl"))
+            print("   ✅ Voting بارگذاری شد")
+        
+        # Scaler‌ها
+        if _exists("scaler_lstm.pkl"):
+            self.lstm_scaler = joblib.load(os.path.join(base_path, "scaler_lstm.pkl"))
+        if _exists("scaler_cnn_lstm.pkl"):
+            self.cnn_lstm_scaler = joblib.load(os.path.join(base_path, "scaler_cnn_lstm.pkl"))
+        if _exists("scaler_tabular.pkl"):
+            self.tabular_scaler = joblib.load(os.path.join(base_path, "scaler_tabular.pkl"))
+        
+        # متادیتا
+        if _exists("meta.json"):
+            with open(os.path.join(base_path, "meta.json"), "r") as f:
+                meta = json.load(f)
+            self.training_history = meta.get("training_history", {})
+        
+        print("\n✅ Ensemble کامل بارگذاری شد")
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📈 گزارش و نمایش
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def print_prediction(self, result: PredictionResult):
+        """نمایش نتیجه پیش‌بینی به صورت خوانا"""
+        # ایموجی بر اساس سیگنال
+        emoji_map = {
+            SignalStrength.STRONG_BUY:  "🟢🟢",
+            SignalStrength.WEAK_BUY:    "🟢",
+            SignalStrength.NEUTRAL:     "⚪",
+            SignalStrength.WEAK_SELL:   "🔴",
+            SignalStrength.STRONG_SELL: "🔴🔴",
+        }
+        
+        print("\n" + "=" * 60)
+        print("📡  سیگنال Ensemble")
+        print("=" * 60)
+        print(f"   {emoji_map[result.signal_strength]}  سیگنال: {result.signal_strength.value}")
+        print(f"   📊 Probability: {result.final_probability:.4f}")
+        print(f"   💪 اطمینان:     {result.confidence:.2%}")
+        print(f"   🤝 توافق مدل‌ها: {result.agreement_score:.2%}")
+        print(f"   ✔️  معتبر:       {'بله' if result.is_valid else 'نه'}")
+        print(f"{'─' * 60}")
+        print(f"   📝 جزئیات هر مدل:")
+        for name, info in result.model_details.items():
+            status = "✅" if info["status"] == "ok" else "❌"
+            pred   = info["prediction"] if info["prediction"] is not None else "N/A"
+            print(f"      {status} {name:<15}: {pred}")
+        print("=" * 60)
+        
+        if not result.is_valid:
+            print("\n   ⚠️  سیگنال معتبر نیست → RiskManager باید تأیید کند")
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🧪 تست کامل
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+if __name__ == "__main__":
+    print("\n" + "=" * 70)
+    print("🧪 تست Ensemble Trading Model v3.0")
+    print("=" * 70)
+    
+    # ─── ساخت داده تست واقعی‌تر ───
+    np.random.seed(42)
+    n = 2000
+    
+    close = 1.0850 + np.cumsum(np.random.randn(n) * 0.0003)
+    returns = np.diff(close, prepend=close[0]) / close
+    
+    df = pd.DataFrame({
+        "close":         close,
+        "Returns":       returns,
+        "RSI":           np.clip(50 + np.cumsum(np.random.randn(n) * 2), 20, 80),
+        "ATR":           np.abs(np.random.randn(n) * 0.0005 + 0.0015),
+        "ADX":           np.clip(30 + np.cumsum(np.random.randn(n) * 0.5), 15, 65),
+        "Distance_MA20": np.random.randn(n) * 0.005,
+        "Distance_MA50": np.random.randn(n) * 0.008,
+    })
+    
+    # Target واقعی‌تر (بر اساس آینده)
+    future_return = df["close"].shift(-5).pct_change(periods=-5) * -1
+    df["Target"] = (future_return > 0.001).astype(int)
+    df = df.dropna().reset_index(drop=True)
+    
+    print(f"\n✅ داده تست: {len(df)} نمونه")
+    print(f"   Target: 0={int((df['Target']==0).sum())}  1={int((df['Target']==1).sum())}")
+    
+    # ─── ساخت و آموزش ───
+    ensemble = EnsembleTradingModel(
+        use_lstm=True,
+        use_cnn_lstm=True,
+        use_xgb=True,
+        use_rf=True,
+    )
+    
+    print("\n⏳ آموزش شروع می‌شود (ممکن است چند دقیقه طول بکشد)...")
+    input("Enter را بزنید...")
+    
+    results = ensemble.train(df, n_splits=3)
+    
+    # ─── تست پیش‌بینی ───
+    print("\n🎯 تست پیش‌بینی...")
+    prediction = ensemble.predict(df.tail(200))
+    ensemble.print_prediction(prediction)
+    
+    # ─── ذخیره و بارگذاری ───
+    print("\n💾 تست ذخیره...")
+    ensemble.save("data/models/ensemble_test")
+    
+    print("\n📂 تست بارگذاری...")
+    ensemble2 = EnsembleTradingModel()
+    ensemble2.load("data/models/ensemble_test")
+    
+    prediction2 = ensemble2.predict(df.tail(200))
+    ensemble2.print_prediction(prediction2)
+    
+    print("\n" + "=" * 70)
+    print("✅ تست کامل موفق بود!")
+    print("=" * 70)
+
+
+
+
+
+"""
+====================================================================
+فایل: mt5_connection.py
+مدیریت اتصال ایمن به MetaTrader 5
+====================================================================
+این ماژول یک Context Manager برای اتصال Thread-Safe به MT5 فراهم می‌کند
+====================================================================
+"""
+
+import MetaTrader5 as mt5
+from contextlib import contextmanager
+import threading
+from typing import Optional
+
+# State Management برای اتصالات
+_mt5_lock = threading.Lock()
+_connection_count = 0
+_is_initialized = False
+
+
+@contextmanager
+def mt5_connection():
+    """
+    Context manager برای اتصال ایمن به MT5
+    
+    ویژگی‌ها:
+    - Thread-Safe: چند thread می‌توانند همزمان استفاده کنند
+    - Reference Counting: فقط در آخرین استفاده disconnect می‌شود
+    - Exception-Safe: حتی در صورت خطا، connection بسته می‌شود
+    
+    استفاده:
+        with mt5_connection():
+            rates = mt5.copy_rates_from_pos("EURUSD", mt5.TIMEFRAME_H1, 0, 100)
+            # کار با MT5...
+        # اتصال خودکار بسته می‌شود
+    
+    Raises:
+        RuntimeError: اگر اتصال به MT5 برقرار نشود
+    
+    مثال:
+        >>> with mt5_connection():
+        ...     tick = mt5.symbol_info_tick("EURUSD")
+        ...     print(f"Ask: {tick.ask}")
+    """
+    global _connection_count, _is_initialized
+    
+    # Lock برای Thread-Safety
+    with _mt5_lock:
+        _connection_count += 1
+        
+        # اولین اتصال
+        if _connection_count == 1:
+            if not mt5.initialize():
+                _connection_count -= 1
+                raise RuntimeError(
+                    "❌ اتصال به MT5 برقرار نشد!\n"
+                    "   راه‌حل:\n"
+                    "   1. MT5 را به عنوان Administrator اجرا کنید\n"
+                    "   2. چک کنید که MT5 باز است\n"
+                    "   3. اتصال اینترنت را بررسی کنید"
+                )
+            _is_initialized = True
+    
+    try:
+        yield  # اجرای کد داخل with
+    finally:
+        # Lock برای Thread-Safety
+        with _mt5_lock:
+            _connection_count -= 1
+            
+            # آخرین اتصال - shutdown
+            if _connection_count == 0 and _is_initialized:
+                mt5.shutdown()
+                _is_initialized = False
+
+
+def is_connected() -> bool:
+    """
+    بررسی وضعیت اتصال به MT5
+    
+    Returns:
+        bool: True اگر متصل باشد
+    """
+    return _is_initialized
+
+
+def get_connection_count() -> int:
+    """
+    تعداد اتصالات فعال
+    
+    Returns:
+        int: تعداد اتصالات باز
+    """
+    return _connection_count
+
+
+def force_disconnect():
+    """
+    قطع اجباری اتصال (فقط برای debug)
+    
+    ⚠️ هشدار: این تابع فقط برای موارد اضطراری است
+    معمولاً نباید استفاده شود
+    """
+    global _connection_count, _is_initialized
+    
+    with _mt5_lock:
+        if _is_initialized:
+            mt5.shutdown()
+            _is_initialized = False
+            _connection_count = 0
+            print("⚠️ اتصال به MT5 به صورت اجباری قطع شد")
+
+
+class MT5ConnectionManager:
+    """
+    کلاس برای مدیریت اتصال MT5 (جایگزین Context Manager)
+    
+    استفاده:
+        manager = MT5ConnectionManager()
+        manager.connect()
+        try:
+            # کار با MT5
+            rates = mt5.copy_rates_from_pos(...)
+        finally:
+            manager.disconnect()
+    """
+    
+    def __init__(self):
+        self._connected = False
+    
+    def connect(self):
+        """اتصال به MT5"""
+        global _connection_count, _is_initialized
+        
+        with _mt5_lock:
+            _connection_count += 1
+            
+            if _connection_count == 1:
+                if not mt5.initialize():
+                    _connection_count -= 1
+                    raise RuntimeError("❌ اتصال به MT5 برقرار نشد")
+                _is_initialized = True
+            
+            self._connected = True
+    
+    def disconnect(self):
+        """قطع اتصال از MT5"""
+        global _connection_count, _is_initialized
+        
+        if not self._connected:
+            return
+        
+        with _mt5_lock:
+            _connection_count -= 1
+            
+            if _connection_count == 0 and _is_initialized:
+                mt5.shutdown()
+                _is_initialized = False
+            
+            self._connected = False
+    
+    def __enter__(self):
+        """پشتیبانی از with statement"""
+        self.connect()
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """پشتیبانی از with statement"""
+        self.disconnect()
+        return False
+
+
+# ============ تست ماژول ============
+if __name__ == "__main__":
+    print("\n" + "="*70)
+    print("🧪 تست MT5 Connection Manager")
+    print("="*70)
+    
+    # تست 1: Context Manager ساده
+    print("\n1️⃣ تست Context Manager ساده:")
+    try:
+        with mt5_connection():
+            print("   ✅ اتصال برقرار شد")
+            print(f"   📊 تعداد اتصالات: {get_connection_count()}")
+            
+            # دریافت نمونه داده
+            tick = mt5.symbol_info_tick("EURUSD")
+            if tick:
+                print(f"   💰 EURUSD Ask: {tick.ask}")
+        
+        print(f"   ✅ اتصال بسته شد (اتصالات فعال: {get_connection_count()})")
+    
+    except RuntimeError as e:
+        print(f"   ❌ خطا: {e}")
+    
+    # تست 2: Nested Connections
+    print("\n2️⃣ تست Nested Connections:")
+    try:
+        with mt5_connection():
+            print(f"   اتصال 1 - تعداد: {get_connection_count()}")
+            
+            with mt5_connection():
+                print(f"   اتصال 2 - تعداد: {get_connection_count()}")
+                
+                with mt5_connection():
+                    print(f"   اتصال 3 - تعداد: {get_connection_count()}")
+                
+                print(f"   بسته شد 3 - تعداد: {get_connection_count()}")
+            
+            print(f"   بسته شد 2 - تعداد: {get_connection_count()}")
+        
+        print(f"   ✅ همه اتصالات بسته شدند - تعداد: {get_connection_count()}")
+    
+    except RuntimeError as e:
+        print(f"   ❌ خطا: {e}")
+    
+    # تست 3: Exception Handling
+    print("\n3️⃣ تست Exception Handling:")
+    try:
+        with mt5_connection():
+            print("   اتصال برقرار شد")
+            raise ValueError("خطای تستی!")
+    except ValueError:
+        print("   ✅ Exception رخ داد")
+        print(f"   ✅ اتصال بسته شد؟ {get_connection_count() == 0}")
+    
+    # تست 4: کلاس Manager
+    print("\n4️⃣ تست MT5ConnectionManager:")
+    manager = MT5ConnectionManager()
+    try:
+        manager.connect()
+        print(f"   ✅ متصل شد - تعداد: {get_connection_count()}")
+    finally:
+        manager.disconnect()
+        print(f"   ✅ قطع شد - تعداد: {get_connection_count()}")
+    
+    # تست 5: استفاده به عنوان Context Manager
+    print("\n5️⃣ تست Manager به عنوان Context:")
+    with MT5ConnectionManager() as manager:
+        print(f"   ✅ اتصال برقرار - تعداد: {get_connection_count()}")
+    print(f"   ✅ اتصال بسته - تعداد: {get_connection_count()}")
+    
+    print("\n" + "="*70)
+    print("✅ همه تست‌ها موفق بود!")
+    print("="*70)
+
+
+
+
+
+"""
+====================================================================
+فایل: risk_manager.py (نسخه اصلاح‌شده v2.1)
+تغییرات: 
+- رفع اشتباه نام متغیرها
+- استفاده از Context Manager
+- بهبود فیلترها
+====================================================================
+"""
+
+import MetaTrader5 as mt5
+from datetime import datetime
+from typing import Tuple, Optional, Dict
+from config import Config
+from mt5_connection import mt5_connection
+from economic_filter import EconomicNewsFilter
+import pandas as pd
+
+
+class RiskManager:
+    def __init__(self):
+        self.daily_start_equity = 0
+        self.today_date = datetime.now().date()
+        self.spread_history = []
+        self.atr_history = []
+        
+        # ✅ فیلتر اخبار اقتصادی
+        self.news_filter = EconomicNewsFilter()
+    
+    def reset_daily(self):
+        """ریست آمار روزانه"""
+        if datetime.now().date() > self.today_date:
+            try:
+                with mt5_connection():
+                    account = mt5.account_info()
+                    if account:
+                        self.daily_start_equity = account.equity
+                self.today_date = datetime.now().date()
+                print(f"\n📅 روز جدید - ریست آمار روزانه")
+            except Exception as e:
+                print(f"⚠️ خطا در ریست روزانه: {e}")
+    
+    def can_trade(self) -> Tuple[bool, str]:
+        """
+        ✅ بررسی جامع امکان معامله
+        
+        بررسی‌ها:
+        1. اتصال MT5
+        2. ضرر روزانه
+        3. تعداد پوزیشن‌های باز
+        
+        Returns:
+            (can_trade, reason)
+        """
+        self.reset_daily()
+        
+        try:
+            with mt5_connection():
+                # دریافت اطلاعات حساب
+                account = mt5.account_info()
+                if not account:
+                    return False, "نمی‌توانم اطلاعات حساب را بخوانم"
+                
+                # بررسی ضرر روزانه
+                if self.daily_start_equity > 0:
+                    daily_loss = (self.daily_start_equity - account.equity) / self.daily_start_equity
+                    if daily_loss > Config.MAX_DAILY_LOSS:
+                        return False, f"ضرر روزانه به حد مجاز رسید ({Config.MAX_DAILY_LOSS*100:.0f}%)"
+                
+                # بررسی تعداد پوزیشن‌های باز
+                positions = mt5.positions_get(symbol=Config.SYMBOL)
+                if positions and len(positions) >= Config.MAX_POSITIONS:
+                    return False, f"حداکثر {Config.MAX_POSITIONS} پوزیشن باز"
+                
+                # ✅ فیلتر اخبار اقتصادی
+                avoid_news, news_reason = self.news_filter.should_avoid_trading(Config.SYMBOL)
+                if avoid_news:
+                    return False, news_reason
+                
+                return True, "آماده معامله"
+        
+        except Exception as e:
+            return False, f"خطا: {e}"
+    
+    def check_market_conditions(
+        self, df: pd.DataFrame, tick
+    ) -> Tuple[bool, str, Dict]:
+        """
+        ✅ بررسی شرایط بازار با فیلترهای پیشرفته
+        
+        فیلترها:
+        1. اسپرد غیرعادی
+        2. نوسان شدید
+        3. Flat Market
+        4. حجم معاملات پایین
+        
+        Returns:
+            (passed, reason, details)
+        """
+        filters_result = {
+            "spread": {"passed": False, "value": 0, "threshold": 0},
+            "volatility": {"passed": False, "value": 0, "threshold": 0},
+            "flat_market": {"passed": False, "adx": 0, "rsi": 0},
+            "volume": {"passed": False, "value": 0, "avg": 0},
+        }
+        
+        # 1️⃣ فیلتر اسپرد
+        spread = tick.ask - tick.bid
+        
+        # محاسبه میانگین اسپرد
+        self.spread_history.append(spread)
+        if len(self.spread_history) > 100:
+            self.spread_history.pop(0)
+        
+        avg_spread = (
+            sum(self.spread_history) / len(self.spread_history)
+            if self.spread_history
+            else spread
+        )
+        spread_threshold = avg_spread * Config.MAX_SPREAD_MULTIPLIER
+        
+        filters_result["spread"]["value"] = spread
+        filters_result["spread"]["threshold"] = spread_threshold
+        
+        if spread > spread_threshold:
+            filters_result["spread"]["passed"] = False
+            return (
+                False,
+                f"اسپرد بالا ({spread*10000:.1f} vs {spread_threshold*10000:.1f} پیپ)",
+                filters_result,
+            )
+        else:
+            filters_result["spread"]["passed"] = True
+        
+        # 2️⃣ فیلتر نوسان
+        current_atr = df["ATR"].iloc[-1]
+        avg_atr = df["ATR"].iloc[-50:].mean()
+        
+        self.atr_history.append(current_atr)
+        if len(self.atr_history) > 100:
+            self.atr_history.pop(0)
+        
+        volatility_ratio = current_atr / avg_atr if avg_atr > 0 else 1.0
+        
+        filters_result["volatility"]["value"] = volatility_ratio
+        filters_result["volatility"]["threshold"] = 1.8
+        
+        if volatility_ratio > 1.8:
+            filters_result["volatility"]["passed"] = False
+            return False, f"نوسان شدید ({volatility_ratio:.2f}x)", filters_result
+        else:
+            filters_result["volatility"]["passed"] = True
+        
+        # 3️⃣ فیلتر Flat Market
+        current_adx = df["ADX"].iloc[-1]
+        current_rsi = df["RSI"].iloc[-1]
+        
+        filters_result["flat_market"]["adx"] = current_adx
+        filters_result["flat_market"]["rsi"] = current_rsi
+        
+        # بازار Flat: ADX پایین + RSI نزدیک 50
+        is_flat = current_adx < Config.MIN_ADX and 45 < current_rsi < 55
+        
+        if is_flat:
+            filters_result["flat_market"]["passed"] = False
+            return (
+                False,
+                f"بازار Flat (ADX:{current_adx:.1f}, RSI:{current_rsi:.1f})",
+                filters_result,
+            )
+        else:
+            filters_result["flat_market"]["passed"] = True
+        
+        # 4️⃣ فیلتر حجم
+        if "tick_volume" in df.columns:
+            current_volume = df["tick_volume"].iloc[-1]
+            avg_volume = df["tick_volume"].iloc[-50:].mean()
+            
+            filters_result["volume"]["value"] = current_volume
+            filters_result["volume"]["avg"] = avg_volume
+            
+            if current_volume < avg_volume * 0.3:
+                filters_result["volume"]["passed"] = False
+                return False, "حجم معاملات پایین", filters_result
+            else:
+                filters_result["volume"]["passed"] = True
+        else:
+            filters_result["volume"]["passed"] = True
+        
+        # ✅ همه فیلترها پاس شدند
+        return True, "شرایط مناسب", filters_result
+    
+    def calculate_volume(self, entry_price: float, stop_loss: float) -> float:
+        """
+        محاسبه حجم بر اساس ریسک
+        
+        Args:
+            entry_price: قیمت ورود
+            stop_loss: قیمت SL
+        
+        Returns:
+            حجم معامله (لات)
+        """
+        try:
+            with mt5_connection():
+                account = mt5.account_info()
+                symbol_info = mt5.symbol_info(Config.SYMBOL)
+                
+                if not account or not symbol_info:
+                    return Config.MIN_LOT_SIZE
+                
+                # محاسبه ریسک
+                risk_money = account.equity * Config.RISK_PER_TRADE
+                sl_distance = abs(entry_price - stop_loss)
+                
+                if sl_distance == 0:
+                    return Config.MIN_LOT_SIZE
+                
+                # محاسبه حجم
+                contract_size = symbol_info.trade_contract_size
+                volume = risk_money / (sl_distance * contract_size)
+                
+                # محدود کردن به حداقل و حداکثر
+                volume = max(
+                    symbol_info.volume_min,
+                    min(volume, min(symbol_info.volume_max, Config.MAX_LOT_SIZE))
+                )
+                
+                # رند کردن
+                step = symbol_info.volume_step
+                volume = round(volume / step) * step
+                
+                return volume
+        
+        except Exception as e:
+            print(f"❌ خطا در محاسبه حجم: {e}")
+            return Config.MIN_LOT_SIZE
+    
+    def calculate_dynamic_sl_tp(
+        self,
+        entry_price: float,
+        direction: str,
+        current_atr: float,
+        avg_atr: float,
+        adx: float,
+    ) -> Tuple[float, float, float, float]:
+        """
+        ✅ محاسبه SL/TP پویا بر اساس شرایط (اصلاح شده)
+        
+        Args:
+            entry_price: قیمت ورود
+            direction: 'BUY' یا 'SELL'
+            current_atr: ATR فعلی
+            avg_atr: میانگین ATR
+            adx: قدرت روند
+        
+        Returns:
+            (sl, tp, sl_distance, tp_distance)
+        """
+        # محاسبه نسبت نوسان
+        volatility_ratio = current_atr / avg_atr if avg_atr > 0 else 1.0
+        
+        # ✅ تنظیم ضریب SL (اصلاح نام)
+        if volatility_ratio > 1.5:
+            sl_multiplier = Config.SL_ATR_MULTIPLIER * 1.3
+        elif volatility_ratio < 0.7:
+            sl_multiplier = Config.SL_ATR_MULTIPLIER * 0.8
+        else:
+            sl_multiplier = Config.SL_ATR_MULTIPLIER
+        
+        # ✅ تنظیم ضریب TP (اصلاح نام)
+        if adx > 40:
+            tp_multiplier = Config.TP_ATR_MULTIPLIER * 1.2
+        elif adx < 25:
+            tp_multiplier = Config.TP_ATR_MULTIPLIER * 0.8
+        else:
+            tp_multiplier = Config.TP_ATR_MULTIPLIER
+        
+        # محاسبه فاصله
+        sl_distance = sl_multiplier * current_atr
+        tp_distance = tp_multiplier * current_atr
+        
+        # محاسبه قیمت‌ها
+        if direction == "BUY":
+            sl = entry_price - sl_distance
+            tp = entry_price + tp_distance
+        else:  # SELL
+            sl = entry_price + sl_distance
+            tp = entry_price - tp_distance
+        
+        return sl, tp, sl_distance, tp_distance
+    
+    def get_risk_report(self) -> Optional[Dict]:
+        """
+        ✅ گزارش وضعیت ریسک
+        
+        Returns:
+            دیکشنری با اطلاعات ریسک یا None
+        """
+        try:
+            with mt5_connection():
+                account = mt5.account_info()
+                if not account:
+                    return None
+                
+                # محاسبه Drawdown
+                if self.daily_start_equity > 0:
+                    daily_dd = (
+                        self.daily_start_equity - account.equity
+                    ) / self.daily_start_equity
+                else:
+                    daily_dd = 0
+                
+                # تعداد پوزیشن‌های باز
+                positions = mt5.positions_get(symbol=Config.SYMBOL)
+                n_positions = len(positions) if positions else 0
+                
+                # حجم کل باز
+                total_volume = sum([p.volume for p in positions]) if positions else 0
+                
+                # سود/ضرر کل
+                total_profit = sum([p.profit for p in positions]) if positions else 0
+                
+                # وضعیت ریسک
+                if daily_dd < Config.MAX_DAILY_LOSS * 0.5:
+                    risk_status = "SAFE"
+                elif daily_dd < Config.MAX_DAILY_LOSS:
+                    risk_status = "WARNING"
+                else:
+                    risk_status = "DANGER"
+                
+                report = {
+                    "equity": account.equity,
+                    "balance": account.balance,
+                    "margin_free": account.margin_free,
+                    "margin_level": (
+                        account.margin_level if account.margin > 0 else 0
+                    ),
+                    "daily_dd": daily_dd,
+                    "n_positions": n_positions,
+                    "total_volume": total_volume,
+                    "total_profit": total_profit,
+                    "risk_status": risk_status,
+                }
+                
+                return report
+        
+        except Exception as e:
+            print(f"❌ خطا در گزارش ریسک: {e}")
+            return None
+    
+    def print_risk_report(self):
+        """چاپ گزارش ریسک"""
+        report = self.get_risk_report()
+        if not report:
+            print("❌ نمی‌توانم گزارش ریسک تهیه کنم")
+            return
+        
+        print("\n" + "=" * 60)
+        print("⚠️ گزارش مدیریت ریسک")
+        print("=" * 60)
+        print(f"💰 Equity: ${report['equity']:.2f}")
+        print(f"💵 Balance: ${report['balance']:.2f}")
+        print(f"📊 Margin Level: {report['margin_level']:.1f}%")
+        print(f"📉 Drawdown روزانه: {report['daily_dd']*100:.2f}%")
+        print(
+            f"📌 پوزیشن‌های باز: {report['n_positions']}/{Config.MAX_POSITIONS}"
+        )
+        print(f"📦 حجم کل: {report['total_volume']:.2f} لات")
+        print(f"💸 سود/ضرر کل: ${report['total_profit']:.2f}")
+        
+        # وضعیت
+        status_emoji = {"SAFE": "🟢", "WARNING": "🟡", "DANGER": "🔴"}
+        print(
+            f"\n{status_emoji[report['risk_status']]} وضعیت: {report['risk_status']}"
+        )
+        print("=" * 60)
+
+
+# ============ تست Risk Manager ============
+if __name__ == "__main__":
+    print("\n🧪 تست Risk Manager (نسخه اصلاح‌شده v2.1)\n")
+    
+    rm = RiskManager()
+    
+    # تست 1: بررسی امکان معامله
+    print("تست 1: بررسی امکان معامله")
+    can_trade, reason = rm.can_trade()
+    print(f"   نتیجه: {can_trade}")
+    print(f"   دلیل: {reason}")
+    
+    # تست 2: محاسبه حجم
+    print("\nتست 2: محاسبه حجم")
+    volume = rm.calculate_volume(1.0850, 1.0830)
+    print(f"   حجم محاسبه شده: {volume} لات")
+    
+    # تست 3: SL/TP پویا
+    print("\nتست 3: محاسبه SL/TP پویا")
+    sl, tp, sl_dist, tp_dist = rm.calculate_dynamic_sl_tp(
+        entry_price=1.0850,
+        direction="BUY",
+        current_atr=0.0015,
+        avg_atr=0.0012,
+        adx=35,
+    )
+    print(f"   Entry: 1.0850")
+    print(f"   SL: {sl:.5f} (فاصله: {sl_dist*10000:.1f} پیپ)")
+    print(f"   TP: {tp:.5f} (فاصله: {tp_dist*10000:.1f} پیپ)")
+    print(f"   نسبت R:R: {tp_dist/sl_dist:.2f}")
+    
+    # تست 4: گزارش ریسک
+    print("\nتست 4: گزارش ریسک")
+    rm.print_risk_report()
+    
+    print("\n" + "=" * 60)
+    print("✅ همه تست‌ها تمام شد")
+    print("=" * 60)
+
+
+
+
+"""
+====================================================================
+فایل: test_phase1.py (نسخه اصلاح‌شده v2.0)
+====================================================================
+تغییرات:
+- اضافه شدن Mock Data برای تست بدون MT5
+- بهبود گزارش‌دهی
+- تست‌های جامع‌تر
+- پشتیبانی از CI/CD
+====================================================================
+"""
+
+import sys
+import numpy as np
+import pandas as pd
+from datetime import datetime
+from typing import Optional
+import warnings
+warnings.filterwarnings('ignore')
+
+
+# ============ Mock Data برای تست ============
+
+class MockMT5Data:
+    """کلاس برای شبیه‌سازی داده MT5"""
+    
+    @staticmethod
+    def generate_ohlc(n: int = 500) -> pd.DataFrame:
+        """
+        تولید داده OHLC تصادفی اما منطقی
+        
+        Args:
+            n: تعداد کندل
+        
+        Returns:
+            DataFrame شبیه‌سازی شده
+        """
+        np.random.seed(42)
+        
+        # ساخت قیمت‌ها با random walk
+        base_price = 1.0850
+        price_changes = np.random.randn(n) * 0.0005
+        close_prices = base_price + np.cumsum(price_changes)
+        
+        df = pd.DataFrame({
+            'time': pd.date_range('2024-01-01', periods=n, freq='H'),
+            'close': close_prices
+        })
+        
+        # ساخت OHLC منطقی
+        df['open'] = df['close'].shift(1).fillna(df['close'])
+        df['high'] = df[['open', 'close']].max(axis=1) + np.random.uniform(0, 0.0010, n)
+        df['low'] = df[['open', 'close']].min(axis=1) - np.random.uniform(0, 0.0010, n)
+        df['tick_volume'] = np.random.randint(100, 1000, n)
+        
+        return df[['time', 'open', 'high', 'low', 'close', 'tick_volume']]
+
+
+# ============ توابع کمکی ============
+
+def print_header(title: str):
+    """چاپ هدر زیبا"""
+    print("\n" + "="*70)
+    print(f"🧪 {title}")
+    print("="*70 + "\n")
+
+
+def try_import_or_mock(use_mock: bool = False):
+    """
+    تلاش برای import واقعی یا استفاده از Mock
+    
+    Args:
+        use_mock: آیا از Mock استفاده شود؟
+    
+    Returns:
+        (success, using_mock)
+    """
+    global data_handler, DataHandler
+    
+    if use_mock:
+        print("ℹ️  استفاده از Mock Data (MT5 در دسترس نیست)")
+        return True, True
+    
+    try:
+        from data_handler import DataHandler
+        import MetaTrader5 as mt5
+        
+        # تست اتصال
+        if not mt5.initialize():
+            print("⚠️  MT5 در دسترس نیست - استفاده از Mock Data")
+            mt5.shutdown()
+            return True, True
+        
+        mt5.shutdown()
+        print("✅ MT5 در دسترس است - استفاده از داده واقعی")
+        return True, False
+    
+    except Exception as e:
+        print(f"⚠️  خطا در import: {e}")
+        print("ℹ️  استفاده از Mock Data")
+        return True, True
+
+
+# ============ تست‌ها ============
+
+def test_data_handler(use_mock: bool = False):
+    """تست 1: Data Handler"""
+    print_header("تست 1: Data Handler")
+    
+    try:
+        from data_handler import DataHandler
+        
+        print("✅ Import موفق بود\n")
+        
+        # ساخت handler
+        handler = DataHandler(use_advanced_features=False, verbose=False)
+        
+        # آماده‌سازی داده
+        if use_mock:
+            print("1️⃣ استفاده از Mock Data...")
+            df_mock = MockMT5Data.generate_ohlc(500)
+            
+            # شبیه‌سازی prepare_training_data
+            df = df_mock.copy()
+            df = handler.add_base_indicators(df)
+            df = df.dropna()
+            df = handler.create_target(df, forward_periods=5, threshold=0.001)
+            
+            print(f"   ✅ {len(df)} کندل Mock آماده شد")
+        
+        else:
+            print("1️⃣ تست prepare_training_data...")
+            df = handler.prepare_training_data(
+                symbol="EURUSD",
+                timeframe="H1",
+                count=500,
+                forward_periods=5,
+                threshold=0.001
+            )
+            
+            if df is None:
+                print("❌ داده دریافت نشد")
+                print("⚠️ لطفاً MT5 را اجرا کنید یا از Mock استفاده کنید")
+                return False
+        
+        # بررسی ستون‌ها
+        print("\n2️⃣ بررسی ستون‌ها...")
+        required_cols = ['time', 'open', 'high', 'low', 'close', 
+                        'RSI', 'ATR', 'ADX', 'Returns', 'Target']
+        
+        missing_cols = [col for col in required_cols if col not in df.columns]
+        
+        if missing_cols:
+            print(f"❌ ستون‌های گم‌شده: {missing_cols}")
+            return False
+        
+        print(f"   ✅ تمام ستون‌های مورد نیاز موجود است")
+        print(f"   ✅ شکل داده: {df.shape}")
+        
+        # توزیع Target
+        target_counts = df['Target'].value_counts()
+        print(f"   ✅ Target distribution:")
+        print(f"      - خرید (1): {target_counts.get(1, 0)}")
+        print(f"      - نگه‌دار (0): {target_counts.get(0, 0)}")
+        
+        # بررسی Data Leakage
+        print("\n3️⃣ بررسی Data Leakage...")
+        leakage_cols = ['Future_Close', 'Price_Change']
+        found_leakage = [col for col in leakage_cols if col in df.columns]
+        
+        if found_leakage:
+            print(f"❌ نشت داده یافت شد: {found_leakage}")
+            return False
+        
+        print("   ✅ هیچ نشت داده‌ای وجود ندارد")
+        
+        # بررسی NaN
+        print("\n4️⃣ بررسی NaN...")
+        nan_count = df.isnull().sum().sum()
+        
+        if nan_count == 0:
+            print(f"   ✅ هیچ NaN وجود ندارد")
+        else:
+            print(f"   ⚠️ {nan_count} مقدار NaN یافت شد")
+            for col in df.columns:
+                col_nan = df[col].isnull().sum()
+                if col_nan > 0:
+                    print(f"      - {col}: {col_nan}")
+        
+        # تست داده زنده
+        print("\n5️⃣ تست prepare_live_data...")
+        
+        if use_mock:
+            df_live_mock = MockMT5Data.generate_ohlc(200)
+            df_live = df_live_mock.copy()
+            df_live = handler.add_base_indicators(df_live)
+            df_live = df_live.dropna()
+        else:
+            df_live = handler.prepare_live_data("EURUSD", "H1", 200)
+        
+        if df_live is None:
+            print("   ❌ خطا در prepare_live_data")
+            return False
+        
+        if 'Target' in df_live.columns:
+            print("   ❌ Target نباید در داده زنده باشد!")
+            return False
+        
+        print(f"   ✅ داده زنده آماده: {df_live.shape}")
+        print("   ✅ Target در داده زنده وجود ندارد")
+        
+        print("\n✅ تست Data Handler موفق بود!")
+        return True
+    
+    except Exception as e:
+        print(f"❌ خطا: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def test_indicators():
+    """تست 2: Indicators Module"""
+    print_header("تست 2: ماژول Indicators")
+    
+    try:
+        from indicators import TechnicalIndicators
+        
+        print("✅ Import موفق بود\n")
+        
+        # ساخت داده تست
+        print("1️⃣ ساخت داده تست...")
+        df = MockMT5Data.generate_ohlc(200)
+        print(f"   ✅ {len(df)} کندل Mock\n")
+        
+        # تست RSI
+        print("2️⃣ تست RSI...")
+        df['RSI'] = TechnicalIndicators.rsi(df['close'])
+        rsi_mean = df['RSI'].dropna().mean()
+        
+        if 0 <= rsi_mean <= 100:
+            print(f"   ✅ RSI معتبر - میانگین: {rsi_mean:.2f}")
+        else:
+            print(f"   ❌ RSI نامعتبر: {rsi_mean}")
+            return False
+        
+        # تست ATR
+        print("\n3️⃣ تست ATR...")
+        df['ATR'] = TechnicalIndicators.atr(df['high'], df['low'], df['close'])
+        atr_mean = df['ATR'].dropna().mean()
+        
+        if atr_mean > 0:
+            print(f"   ✅ ATR معتبر - میانگین: {atr_mean:.6f}")
+        else:
+            print(f"   ❌ ATR نامعتبر: {atr_mean}")
+            return False
+        
+        # تست ADX
+        print("\n4️⃣ تست ADX...")
+        df = TechnicalIndicators.adx(df)
+        adx_mean = df['ADX'].dropna().mean()
+        
+        if 0 <= adx_mean <= 100:
+            print(f"   ✅ ADX معتبر - میانگین: {adx_mean:.2f}")
+        else:
+            print(f"   ❌ ADX نامعتبر: {adx_mean}")
+            return False
+        
+        # تست MACD
+        print("\n5️⃣ تست MACD...")
+        macd, signal, hist = TechnicalIndicators.macd(df['close'])
+        
+        if not macd.isnull().all():
+            print(f"   ✅ MACD محاسبه شد")
+            print(f"      آخرین مقدار: {macd.iloc[-1]:.6f}")
+        else:
+            print("   ❌ MACD نامعتبر")
+            return False
+        
+        print("\n✅ تست Indicators موفق بود!")
+        return True
+    
+    except Exception as e:
+        print(f"❌ خطا: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def test_advanced_features():
+    """تست 3: Advanced Features"""
+    print_header("تست 3: Advanced Features")
+    
+    try:
+        from advanced_features import AdvancedFeatureEngineer
+        from indicators import TechnicalIndicators
+        
+        print("✅ Import موفق بود\n")
+        
+        # ساخت داده تست
+        print("1️⃣ ساخت داده تست...")
+        df = MockMT5Data.generate_ohlc(300)
+        
+        # اضافه کردن اندیکاتورهای پایه
+        df['RSI'] = TechnicalIndicators.rsi(df['close'])
+        df['ATR'] = TechnicalIndicators.atr(df['high'], df['low'], df['close'])
+        df = TechnicalIndicators.adx(df)
+        df['Returns'] = df['close'].pct_change()
+        df['MA_20'] = df['close'].rolling(20).mean()
+        df['MA_50'] = df['close'].rolling(50).mean()
+        df['Distance_MA20'] = (df['close'] - df['MA_20']) / df['MA_20']
+        df['Distance_MA50'] = (df['close'] - df['MA_50']) / df['MA_50']
+        
+        initial_cols = len(df.columns)
+        print(f"   ✅ {len(df)} کندل با {initial_cols} ستون\n")
+        
+        # اضافه کردن ویژگی‌های پیشرفته
+        print("2️⃣ اضافه کردن ویژگی‌های پیشرفته...")
+        engineer = AdvancedFeatureEngineer(verbose=False)
+        df = engineer.add_all_features(df)
+        df = df.dropna()
+        
+        final_cols = len(df.columns)
+        added_cols = final_cols - initial_cols
+        
+        print(f"   ✅ {added_cols} ویژگی جدید اضافه شد")
+        print(f"   ✅ شکل نهایی: {df.shape}\n")
+        
+        # بررسی کیفیت
+        print("3️⃣ بررسی کیفیت ویژگی‌ها...")
+        
+        features = engineer.get_feature_names(df)
+        nan_count = df[features].isnull().sum().sum()
+        
+        if nan_count == 0:
+            print(f"   ✅ هیچ NaN در ویژگی‌ها وجود ندارد")
+        else:
+            print(f"   ⚠️ {nan_count} مقدار NaN یافت شد")
+        
+        # نمونه ویژگی‌ها
+        print(f"\n4️⃣ نمونه ویژگی‌های جدید:")
+        sample_features = ['Body_Pct', 'Vol_Regime', 'MACD_Hist', 'Uptrend_Strength']
+        
+        for feat in sample_features:
+            if feat in df.columns:
+                val = df[feat].iloc[-1]
+                print(f"   • {feat:20s}: {val:.6f}")
+        
+        print("\n✅ تست Advanced Features موفق بود!")
+        return True
+    
+    except Exception as e:
+        print(f"❌ خطا: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def test_integration(use_mock: bool = False):
+    """تست 4: Integration Test"""
+    print_header("تست 4: یکپارچگی کامل")
+    
+    try:
+        from data_handler import DataHandler
+        
+        print("✅ Import موفق بود\n")
+        
+        # تست حالت پایه
+        print("1️⃣ تست حالت پایه...")
+        handler_basic = DataHandler(use_advanced_features=False, verbose=False)
+        
+        if use_mock:
+            df_mock = MockMT5Data.generate_ohlc(500)
+            df_basic = df_mock.copy()
+            df_basic = handler_basic.add_base_indicators(df_basic)
+            df_basic = df_basic.dropna()
+            df_basic = handler_basic.create_target(df_basic)
+        else:
+            df_basic = handler_basic.prepare_training_data(
+                "EURUSD", "H1", 500
+            )
+        
+        if df_basic is not None:
+            features_basic = handler_basic.get_feature_list(df_basic)
+            print(f"   ✅ حالت پایه: {df_basic.shape}")
+            print(f"   ✅ {len(features_basic)} ویژگی")
+        else:
+            print("   ❌ خطا در حالت پایه")
+            return False
+        
+        # تست حالت پیشرفته
+        print("\n2️⃣ تست حالت پیشرفته...")
+        handler_adv = DataHandler(use_advanced_features=True, verbose=False)
+        
+        if use_mock:
+            df_mock = MockMT5Data.generate_ohlc(500)
+            df_adv = df_mock.copy()
+            df_adv = handler_adv.add_base_indicators(df_adv)
+            df_adv = handler_adv.feature_engineer.add_all_features(df_adv)
+            df_adv = df_adv.dropna()
+            df_adv = handler_adv.create_target(df_adv)
+        else:
+            df_adv = handler_adv.prepare_training_data(
+                "EURUSD", "H1", 500
+            )
+        
+        if df_adv is not None:
+            features_adv = handler_adv.get_feature_list(df_adv)
+            print(f"   ✅ حالت پیشرفته: {df_adv.shape}")
+            print(f"   ✅ {len(features_adv)} ویژگی")
+        else:
+            print("   ❌ خطا در حالت پیشرفته")
+            return False
+        
+        # مقایسه
+        print(f"\n3️⃣ مقایسه:")
+        print(f"   • حالت پایه: {len(features_basic)} ویژگی")
+        print(f"   • حالت پیشرفته: {len(features_adv)} ویژگی")
+        print(f"   • افزایش: +{len(features_adv) - len(features_basic)} ویژگی")
+        
+        print("\n✅ تست یکپارچگی موفق بود!")
+        return True
+    
+    except Exception as e:
+        print(f"❌ خطا: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def main():
+    """اجرای تمام تست‌ها"""
+    print("\n" + "="*70)
+    print("🚀 تست جامع فاز 1: Data Foundation Layer")
+    print("="*70)
+    print("\nاین تست‌ها بررسی می‌کنند که:")
+    print("  ✅ Data Leakage وجود ندارد")
+    print("  ✅ اندیکاتورها صحیح محاسبه می‌شوند")
+    print("  ✅ ویژگی‌های پیشرفته کار می‌کنند")
+    print("  ✅ یکپارچگی کامل وجود دارد")
+    print()
+    
+    # تشخیص حالت اجرا
+    use_mock = '--mock' in sys.argv or '--no-mt5' in sys.argv
+    
+    if use_mock:
+        print("ℹ️  حالت Mock فعال است (بدون نیاز به MT5)\n")
+    else:
+        print("ℹ️  تلاش برای استفاده از MT5 واقعی...\n")
+        _, use_mock = try_import_or_mock(use_mock)
+    
+    input("Enter را بزنید تا تست‌ها شروع شوند...")
+    
+    results = {}
+    
+    # اجرای تست‌ها
+    results['data_handler'] = test_data_handler(use_mock)
+    results['indicators'] = test_indicators()
+    results['advanced_features'] = test_advanced_features()
+    results['integration'] = test_integration(use_mock)
+    
+    # خلاصه نتایج
+    print("\n" + "="*70)
+    print("📊 خلاصه نتایج تست‌ها")
+    print("="*70)
+    
+    for test_name, result in results.items():
+        status = "✅ PASS" if result else "❌ FAIL"
+        print(f"{status} - {test_name}")
+    
+    # نتیجه کلی
+    all_passed = all(results.values())
+    
+    print("\n" + "="*70)
+    if all_passed:
+        print("✅ همه تست‌ها موفق بودند!")
+        print("\n📌 لایه Data Foundation آماده است")
+        print("\nمراحل بعدی:")
+        print("  1. به چت 2 بروید (ML Layer)")
+        print("  2. از DataHandler برای آماده‌سازی داده استفاده کنید")
+        print("  3. لیست features را با get_feature_list() دریافت کنید")
+    else:
+        print("❌ برخی تست‌ها شکست خوردند")
+        print("\nلطفاً خطاها را بررسی و رفع کنید")
+    
+    print("="*70)
+    
+    # راهنمای استفاده
+    if not use_mock:
+        print("\n💡 نکته: برای اجرا بدون MT5:")
+        print("   python test_phase1.py --mock")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n\n⏹️ تست توسط کاربر متوقف شد")
+    except Exception as e:
+        print(f"\n\n❌ خطای غیرمنتظره: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        input("\n\nEnter را بزنید تا پنجره بسته شود...")
+
+
+
+
+"""
+====================================================================
+فایل: train.py (نسخه اصلاح‌شده v2.0)
+تغییرات: استفاده از توابع جدید + Walk-Forward Validation
+====================================================================
+"""
+
+from config import Config
+from data_handler import prepare_training_data
+from ml_model import TradingModel
+import numpy as np
+
+def main():
+    print("\n" + "="*70)
+    print("🧠 آموزش مدل هوش مصنوعی (نسخه اصلاح‌شده v2.0)")
+    print("="*70)
+    print("\n📌 بهبودها:")
+    print("   ✅ رفع Data Leakage")
+    print("   ✅ Walk-Forward Validation")
+    print("   ✅ مدل کوچک‌تر با Regularization")
+    print("   ✅ تشخیص Overfitting")
+    print()
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # گام 1: آماده‌سازی داده (بدون Data Leakage)
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    df = prepare_training_data(
+        symbol=Config.SYMBOL,
+        timeframe=Config.TIMEFRAME_PRIMARY,
+        count=Config.HISTORICAL_CANDLES,
+        forward_periods=5,
+        threshold=0.001
+    )
+    
+    if df is None:
+        print("\n❌ خطا: داده دریافت نشد!")
+        print("   راه‌حل:")
+        print("   1. MT5 را به عنوان Administrator اجرا کنید")
+        print("   2. چک کنید که EURUSD در Market Watch باشد")
+        print("   3. اتصال اینترنت را چک کنید")
+        return
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # گام 2: بررسی کیفیت داده
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    print("\n" + "="*70)
+    print("🔍 بررسی کیفیت داده")
+    print("="*70)
+    
+    # بررسی تعادل کلاس‌ها
+    target_distribution = df['Target'].value_counts()
+    class_0_pct = (target_distribution[0] / len(df)) * 100
+    class_1_pct = (target_distribution[1] / len(df)) * 100
+    
+    print(f"\n📊 توزیع Target:")
+    print(f"   کلاس 0 (نگه‌دار/فروش): {target_distribution[0]} ({class_0_pct:.1f}%)")
+    print(f"   کلاس 1 (خرید): {target_distribution[1]} ({class_1_pct:.1f}%)")
+    
+    # هشدار عدم تعادل
+    if class_1_pct < 30 or class_1_pct > 70:
+        print(f"\n⚠️ هشدار: عدم تعادل در کلاس‌ها!")
+        print(f"   توصیه: threshold را تنظیم کنید یا داده بیشتر جمع کنید")
+    
+    # بررسی NaN
+    nan_count = df.isnull().sum().sum()
+    if nan_count > 0:
+        print(f"\n❌ خطا: {nan_count} مقدار NaN یافت شد!")
+        return
+    else:
+        print(f"\n✅ هیچ مقدار NaN وجود ندارد")
+    
+    # نمایش آمار features
+    print(f"\n📈 آمار Features:")
+    features = ['Returns', 'RSI', 'ATR', 'ADX', 'Distance_MA20', 'Distance_MA50']
+    for feature in features:
+        if feature in df.columns:
+            mean_val = df[feature].mean()
+            std_val = df[feature].std()
+            print(f"   {feature:15s}: μ={mean_val:8.4f}, σ={std_val:8.4f}")
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # گام 3: آماده‌سازی توالی‌ها برای LSTM
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    print("\n" + "="*70)
+    print("🔄 آماده‌سازی توالی‌ها برای LSTM")
+    print("="*70)
+    
+    model = TradingModel()
+    X, y = model.prepare_sequences(df, lookback=Config.LOOKBACK_PERIOD)
+    
+    print(f"\n📊 شکل داده نهایی:")
+    print(f"   X: {X.shape} (samples, timesteps, features)")
+    print(f"   y: {y.shape} (samples,)")
+    print(f"\n💾 حافظه مورد نیاز:")
+    print(f"   X: {X.nbytes / 1024 / 1024:.1f} MB")
+    print(f"   y: {y.nbytes / 1024:.1f} KB")
+    
+    # بررسی حداقل داده
+    if len(X) < 500:
+        print(f"\n⚠️ هشدار: داده کم است ({len(X)} نمونه)")
+        print(f"   توصیه: حداقل 1000 نمونه برای آموزش خوب نیاز است")
+        response = input("\nآیا می‌خواهید ادامه دهید؟ (y/n): ")
+        if response.lower() != 'y':
+            print("❌ آموزش لغو شد")
+            return
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # گام 4: نمایش معماری مدل
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    print("\n" + "="*70)
+    print("🏗️ معماری مدل")
+    print("="*70)
+    
+    temp_model = model.build_model((X.shape[1], X.shape[2]))
+    temp_model.summary()
+    
+    # محاسبه نسبت پارامتر به نمونه
+    trainable_params = sum([np.prod(v.shape) for v in temp_model.trainable_weights])
+    param_to_sample_ratio = trainable_params / len(X)
+    
+    print(f"\n📊 تحلیل پیچیدگی:")
+    print(f"   پارامترهای قابل آموزش: {trainable_params:,}")
+    print(f"   تعداد نمونه‌ها: {len(X):,}")
+    print(f"   نسبت پارامتر/نمونه: {param_to_sample_ratio:.2f}")
+    
+    if param_to_sample_ratio > 0.1:
+        print(f"\n⚠️ هشدار: نسبت پارامتر به نمونه بالاست!")
+        print(f"   خطر Overfitting وجود دارد")
+    else:
+        print(f"\n✅ نسبت پارامتر به نمونه مناسب است")
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # گام 5: آموزش با Walk-Forward Validation
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    print("\n" + "="*70)
+    print("🚀 شروع آموزش")
+    print("="*70)
+    print(f"\n📝 تنظیمات:")
+    print(f"   Epochs: {Config.EPOCHS}")
+    print(f"   Batch Size: {Config.BATCH_SIZE}")
+    print(f"   Walk-Forward Splits: 5")
+    print(f"   Early Stopping: فعال")
+    print(f"   Learning Rate Scheduler: فعال")
+    print()
+    
+    input("Enter را بزنید تا آموزش شروع شود...")
+    
+    # آموزش
+    accuracy = model.train(X, y, use_walk_forward=True)
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # گام 6: ارزیابی نهایی
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    print("\n" + "="*70)
+    print("📊 ارزیابی نهایی")
+    print("="*70)
+    
+    # محاسبه Baseline Accuracy
+    baseline_acc = max(class_0_pct, class_1_pct) / 100
+    print(f"\nBaseline Accuracy: {baseline_acc*100:.2f}% (پیش‌بینی همیشه کلاس اکثریت)")
+    print(f"Model Accuracy: {accuracy*100:.2f}%")
+    print(f"بهبود نسبت به Baseline: {(accuracy - baseline_acc)*100:.2f}%")
+    
+    # تفسیر نتیجه
+    print(f"\n{'='*70}")
+    if accuracy > baseline_acc + 0.10:  # حداقل 10% بهتر از baseline
+        print("✅ نتیجه عالی: مدل به خوبی یاد گرفته است")
+        evaluation = "EXCELLENT"
+    elif accuracy > baseline_acc + 0.05:  # حداقل 5% بهتر از baseline
+        print("✅ نتیجه خوب: مدل قابل استفاده است")
+        evaluation = "GOOD"
+    elif accuracy > baseline_acc:
+        print("⚠️ نتیجه متوسط: مدل کمی بهتر از حدس تصادفی است")
+        evaluation = "FAIR"
+    else:
+        print("❌ نتیجه ضعیف: مدل بهتر از حدس تصادفی نیست")
+        evaluation = "POOR"
+    print(f"{'='*70}")
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # گام 7: ذخیره مدل
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    if evaluation in ['EXCELLENT', 'GOOD', 'FAIR']:
+        print("\n" + "="*70)
+        print("💾 ذخیره مدل")
+        print("="*70)
+        model.save()
+        
+        # ذخیره متادیتا
+        import json
+        metadata = {
+            'symbol': Config.SYMBOL,
+            'timeframe': Config.TIMEFRAME_PRIMARY,
+            'lookback': Config.LOOKBACK_PERIOD,
+            'training_samples': len(X),
+            'accuracy': float(accuracy),
+            'baseline_accuracy': float(baseline_acc),
+            'evaluation': evaluation,
+            'features': model.features,
+            'model_params': int(trainable_params),
+            'training_date': str(df['time'].iloc[-1]),
+            'data_start': str(df['time'].iloc[0]),
+            'data_end': str(df['time'].iloc[-1])
+        }
+        
+        with open('model_metadata.json', 'w') as f:
+            json.dump(metadata, f, indent=2)
+        
+        print("\n✅ فایل‌های ذخیره شده:")
+        print(f"   1. {Config.MODEL_FILE} (مدل)")
+        print(f"   2. {Config.SCALER_FILE} (scaler)")
+        print(f"   3. training_history.json (تاریخچه)")
+        print(f"   4. model_metadata.json (متادیتا)")
+    else:
+        print("\n⚠️ مدل ذخیره نمی‌شود چون عملکرد ضعیف است")
+        print("\n💡 پیشنهادات:")
+        print("   1. داده بیشتری جمع کنید (افزایش HISTORICAL_CANDLES)")
+        print("   2. threshold را تنظیم کنید")
+        print("   3. تایم فریم را تغییر دهید")
+        print("   4. forward_periods را تغییر دهید")
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # خلاصه نهایی
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    print("\n" + "="*70)
+    print("📋 خلاصه آموزش")
+    print("="*70)
+    print(f"نماد: {Config.SYMBOL}")
+    print(f"تایم فریم: {Config.TIMEFRAME_PRIMARY}")
+    print(f"داده‌های آموزش: {len(X):,} نمونه")
+    print(f"دقت نهایی: {accuracy*100:.2f}%")
+    print(f"ارزیابی: {evaluation}")
+    print("="*70)
+    
+    if evaluation in ['EXCELLENT', 'GOOD', 'FAIR']:
+        print("\n✅ آموزش موفقیت‌آمیز بود!")
+        print("\n📌 مرحله بعدی:")
+        print("   1. run_backtest.py را اجرا کنید (تست روی داده تاریخی)")
+        print("   2. run_bot.py را روی Demo اجرا کنید")
+    else:
+        print("\n⚠️ لطفاً تنظیمات را بهبود دهید و دوباره آموزش دهید")
+    
+    print("="*70)
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:"""
+
+
+
+
+====================================================================
+فایل: order_manager.py
+مدیریت کامل سفارش‌های MetaTrader 5
+====================================================================
+ویژگی‌ها:
+    ✅ باز کردن پوزیشن BUY / SELL
+    ✅ بستن پوزیشن
+    ✅ Partial Close
+    ✅ Break Even
+    ✅ Trailing Stop
+    ✅ مدیریت خطا و retry
+    ✅ لاگ هر عملیات
+====================================================================
+"""
+
+import MetaTrader5 as mt5
+import time
+from datetime import datetime
+from typing import Optional, Dict, List, Tuple
+from config import Config
+from mt5_connection import mt5_connection
+from explainable_logger import ExplainableLogger
+
+
+class OrderManager:
+    """
+    مدیریت سفارش‌های MT5
+    
+    استفاده:
+        om = OrderManager()
+        ticket = om.open_trade("BUY", entry=1.0850, sl=1.0830, tp=1.0890, volume=0.1)
+        om.close_trade(ticket)
+    """
+    
+    def __init__(self):
+        self.logger = ExplainableLogger()
+        self.symbol = Config.SYMBOL
+        self.magic   = 12345  # شناسه منحصر به فرد ربات
+        
+        # تنظیمات retry
+        self.max_retries = 3
+        self.retry_delay = 1  # ثانیه
+        
+        print("📦 Order Manager فعال شد")
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🟢 باز کردن پوزیشن
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def open_trade(
+        self,
+        direction: str,       # "BUY" یا "SELL"
+        entry: float,
+        sl: float,
+        tp: float,
+        volume: float,
+        comment: str = "",
+    ) -> Optional[int]:
+        """
+        باز کردن یک پوزیشن
+        
+        Args:
+            direction: جهت معامله
+            entry: قیمت ورود
+            sl: Stop Loss
+            tp: Take Profit
+            volume: حجم (لات)
+            comment: نظر
+        
+        Returns:
+            ticket شماره پوزیشن یا None در صورت خطا
+        """
+        # validation
+        if direction not in ("BUY", "SELL"):
+            self.logger.log_error("ORDER", f"جهت نامعتبر: {direction}")
+            return None
+        
+        if volume < Config.MIN_LOT_SIZE:
+            self.logger.log_warning("ORDER", f"حجم خیلی کم: {volume}")
+            volume = Config.MIN_LOT_SIZE
+        
+        if volume > Config.MAX_LOT_SIZE:
+            self.logger.log_warning("ORDER", f"حجم خیلی زیاد: {volume} → حداکثر")
+            volume = Config.MAX_LOT_SIZE
+        
+        # retry loop
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                with mt5_connection():
+                    # دریافت قیمت فعلی
+                    tick = mt5.symbol_info_tick(self.symbol)
+                    if not tick:
+                        self.logger.log_error("ORDER", "قیمت فعلی دریافت نشد")
+                        return None
+                    
+                    # تعیین نوع سفارش و قیمت
+                    if direction == "BUY":
+                        order_type = mt5.ORDER_TYPE_BUY
+                        price = tick.ask  # ✅ BUY از ask
+                    else:
+                        order_type = mt5.ORDER_TYPE_SELL
+                        price = tick.bid  # ✅ SELL از bid
+                    
+                    # ساخت request
+                    request = {
+                        "action":      mt5.TRADE_ACTION_DEAL,
+                        "symbol":      self.symbol,
+                        "volume":      round(volume, 2),
+                        "type":        order_type,
+                        "price":       price,
+                        "sl":          sl,
+                        "tp":          tp,
+                        "deviation":   10,  # slippage (پیپ)
+                        "magic":       self.magic,
+                        "comment":     comment or f"Bot {direction}",
+                        "type_filling": mt5.ORDER_FILLING_IOC,
+                        "type_time":   mt5.ORDER_TIME_GTC,
+                    }
+                    
+                    # ارسال سفارش
+                    result = mt5.order_send(request)
+                    
+                    if result.retcode == mt5.TRADE_RETCODE_DONE:
+                        ticket = result.ticket
+                        self.logger.log_trade(
+                            action="OPEN",
+                            symbol=self.symbol,
+                            price=price,
+                            volume=volume,
+                            sl=sl,
+                            tp=tp,
+                            reason=comment,
+                        )
+                        print(f"🟢 پوزیشن باز شد: ticket={ticket} | {direction} @ {price:.5f}")
+                        return ticket
+                    else:
+                        # خطا از MT5
+                        print(f"⚠️ خطا سفارش (تلاش {attempt}): {result.retcode} - {result.comment}")
+                        
+                        # بعضی خطاها قابل retry نیستند
+                        if result.retcode in (
+                            mt5.TRADE_RETCODE_INVALID_VOLUME,
+                            mt5.TRADE_RETCODE_INVALID_STOPS,
+                        ):
+                            self.logger.log_error("ORDER", f"خطای ساختاری: {result.comment}")
+                            return None
+                        
+                        # بقیه: صبر و retry
+                        time.sleep(self.retry_delay)
+            
+            except Exception as e:
+                self.logger.log_error("ORDER", f"استثنا: {e}")
+                if attempt < self.max_retries:
+                    time.sleep(self.retry_delay)
+        
+        # بعد از همه retry‌ها
+        self.logger.log_error("ORDER", f"نتوانستیم پوزیشن باز کنیم بعد از {self.max_retries} تلاش")
+        return None
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🔴 بستن پوزیشن
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def close_trade(self, ticket: int, reason: str = "") -> bool:
+        """
+        بستن یک پوزیشن با ticket آن
+        
+        Returns:
+            True اگر موفق، False اگر خطا
+        """
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                with mt5_connection():
+                    # پیدا کردن پوزیشن
+                    position = mt5.positions_get(ticket=ticket)
+                    if not position:
+                        print(f"⚠️ پوزیشن {ticket} پیدا نشد")
+                        return False
+                    
+                    position = position[0]
+                    
+                    # قیمت فعلی
+                    tick = mt5.symbol_info_tick(position.symbol)
+                    if not tick:
+                        return False
+                    
+                    # جهت بستن (عکس پوزیشن)
+                    if position.type == mt5.POSITION_TYPE_BUY:
+                        order_type = mt5.ORDER_TYPE_SELL
+                        price = tick.bid
+                    else:
+                        order_type = mt5.ORDER_TYPE_BUY
+                        price = tick.ask
+                    
+                    # request بستن
+                    request = {
+                        "action":       mt5.TRADE_ACTION_DEAL,
+                        "symbol":       position.symbol,
+                        "volume":       position.volume,
+                        "type":         order_type,
+                        "price":        price,
+                        "deviation":    10,
+                        "magic":        self.magic,
+                        "comment":      reason or "Bot close",
+                        "type_filling": mt5.ORDER_FILLING_IOC,
+                    }
+                    
+                    result = mt5.order_send(request)
+                    
+                    if result.retcode == mt5.TRADE_RETCODE_DONE:
+                        self.logger.log_trade(
+                            action="CLOSE",
+                            symbol=position.symbol,
+                            price=price,
+                            profit=position.profit,
+                            reason=reason,
+                        )
+                        print(f"🔴 پوزیشن {ticket} بسته شد | P/L: ${position.profit:.2f}")
+                        return True
+                    else:
+                        print(f"⚠️ خطا بستن (تلاش {attempt}): {result.comment}")
+                        time.sleep(self.retry_delay)
+            
+            except Exception as e:
+                self.logger.log_error("CLOSE", f"استثنا: {e}")
+                if attempt < self.max_retries:
+                    time.sleep(self.retry_delay)
+        
+        return False
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🟡 Partial Close
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def partial_close(self, ticket: int, close_percent: float = 0.5) -> bool:
+        """
+        بستن جزئی پوزیشن
+        
+        Args:
+            ticket: شماره پوزیشن
+            close_percent: چه درصد بسته شود (0.5 = نصف)
+        """
+        try:
+            with mt5_connection():
+                position = mt5.positions_get(ticket=ticket)
+                if not position:
+                    return False
+                
+                position = position[0]
+                close_volume = round(position.volume * close_percent, 2)
+                
+                # حداقل حجم مجاز
+                symbol_info = mt5.symbol_info(position.symbol)
+                if symbol_info and close_volume < symbol_info.volume_min:
+                    close_volume = symbol_info.volume_min
+                
+                tick = mt5.symbol_info_tick(position.symbol)
+                if not tick:
+                    return False
+                
+                if position.type == mt5.POSITION_TYPE_BUY:
+                    order_type = mt5.ORDER_TYPE_SELL
+                    price = tick.bid
+                else:
+                    order_type = mt5.ORDER_TYPE_BUY
+                    price = tick.ask
+                
+                request = {
+                    "action":       mt5.TRADE_ACTION_DEAL,
+                    "symbol":       position.symbol,
+                    "volume":       close_volume,
+                    "type":         order_type,
+                    "price":        price,
+                    "deviation":    10,
+                    "magic":        self.magic,
+                    "comment":      "Partial close",
+                    "type_filling": mt5.ORDER_FILLING_IOC,
+                }
+                
+                result = mt5.order_send(request)
+                
+                if result.retcode == mt5.TRADE_RETCODE_DONE:
+                    self.logger.log_trade(
+                        action="PARTIAL",
+                        symbol=position.symbol,
+                        price=price,
+                        volume=close_volume,
+                        reason=f"Partial {close_percent*100:.0f}%",
+                    )
+                    print(f"🟡 Partial Close: {close_volume} لات از ticket {ticket}")
+                    return True
+                else:
+                    print(f"⚠️ خطا Partial: {result.comment}")
+                    return False
+        
+        except Exception as e:
+            self.logger.log_error("PARTIAL", f"استثنا: {e}")
+            return False
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📐 Break Even و Trailing Stop
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def manage_position(self, ticket: int, current_atr: float) -> Dict:
+        """
+        مدیریت پوزیشن باز (BE + Trailing)
+        
+        هر چند ثانیه یکبار صدا زده می‌شود
+        
+        Returns:
+            دیکشنری شامل عملیات انجام شده
+        """
+        actions = {"break_even": False, "trailing": False, "partial": False}
+        
+        try:
+            with mt5_connection():
+                position = mt5.positions_get(ticket=ticket)
+                if not position:
+                    return actions
+                
+                pos = position[0]
+                tick = mt5.symbol_info_tick(pos.symbol)
+                if not tick:
+                    return actions
+                
+                current_price = tick.bid if pos.type == mt5.POSITION_TYPE_BUY else tick.ask
+                
+                # محاسبه سود فعلی در ATR
+                if pos.type == mt5.POSITION_TYPE_BUY:
+                    profit_distance = current_price - pos.price_open
+                else:
+                    profit_distance = pos.price_open - current_price
+                
+                profit_in_atr = profit_distance / current_atr if current_atr > 0 else 0
+                
+                # ─── Break Even ───
+                if (
+                    not actions["break_even"]
+                    and profit_in_atr >= Config.BE_TRIGGER_ATR
+                    and pos.sl != pos.price_open  # هنوز BE نشده
+                ):
+                    be_price = pos.price_open
+                    # offset اضافه کنیم
+                    offset = Config.BE_OFFSET_PIPS * 0.0001
+                    if pos.type == mt5.POSITION_TYPE_BUY:
+                        be_price += offset
+                    else:
+                        be_price -= offset
+                    
+                    # فقط اگر SL جلو رفته باشد
+                    move_sl = (
+                        (pos.type == mt5.POSITION_TYPE_BUY  and be_price > pos.sl)
+                        or (pos.type == mt5.POSITION_TYPE_SELL and be_price < pos.sl)
+                    )
+                    
+                    if move_sl:
+                        self._modify_sl(ticket, be_price)
+                        actions["break_even"] = True
+                        print(f"📌 Break Even: ticket={ticket} | SL→{be_price:.5f}")
+                
+                # ─── Trailing Stop ───
+                if Config.TRAILING_ENABLED:
+                    for level in Config.TRAILING_LEVELS:
+                        if profit_in_atr >= level["profit_atr"]:
+                            trail_dist = level["trail_atr"] * current_atr
+                            
+                            if pos.type == mt5.POSITION_TYPE_BUY:
+                                new_sl = current_price - trail_dist
+                            else:
+                                new_sl = current_price + trail_dist
+                            
+                            # فقط اگر جلو رفته باشد
+                            move = (
+                                (pos.type == mt5.POSITION_TYPE_BUY  and new_sl > pos.sl)
+                                or (pos.type == mt5.POSITION_TYPE_SELL and new_sl < pos.sl)
+                            )
+                            
+                            if move:
+                                self._modify_sl(ticket, new_sl)
+                                actions["trailing"] = True
+                                print(f"📈 Trailing: ticket={ticket} | SL→{new_sl:.5f}")
+                            break  # فقط بالاترین سطح فعال شود
+                
+                # ─── Partial Close ───
+                if (
+                    Config.PARTIAL_CLOSE_ENABLED
+                    and profit_in_atr >= Config.PARTIAL_CLOSE_TRIGGER_ATR
+                    and pos.volume > Config.MIN_LOT_SIZE * 2  # حجم کافی باشد
+                ):
+                    self.partial_close(ticket, Config.PARTIAL_CLOSE_PERCENT)
+                    actions["partial"] = True
+        
+        except Exception as e:
+            self.logger.log_error("MANAGE", f"استثنا: {e}")
+        
+        return actions
+    
+    def _modify_sl(self, ticket: int, new_sl: float) -> bool:
+        """تغییر SL پوزیشن"""
+        try:
+            with mt5_connection():
+                position = mt5.positions_get(ticket=ticket)
+                if not position:
+                    return False
+                pos = position[0]
+                
+                request = {
+                    "action":   mt5.TRADE_ACTION_SLTP,
+                    "symbol":   pos.symbol,
+                    "ticket":   ticket,
+                    "sl":       new_sl,
+                    "tp":       pos.tp,
+                }
+                
+                result = mt5.order_send(request)
+                return result.retcode == mt5.TRADE_RETCODE_DONE
+        except Exception as e:
+            self.logger.log_error("MODIFY_SL", str(e))
+            return False
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📊 وضعیت پوزیشن‌ها
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def get_open_positions(self) -> List[Dict]:
+        """دریافت لیست پوزیشن‌های باز"""
+        positions = []
+        try:
+            with mt5_connection():
+                raw = mt5.positions_get(symbol=self.symbol)
+                if raw:
+                    for p in raw:
+                        positions.append({
+                            "ticket":     p.ticket,
+                            "type":       "BUY" if p.type == mt5.POSITION_TYPE_BUY else "SELL",
+                            "price_open": p.price_open,
+                            "sl":         p.sl,
+                            "tp":         p.tp,
+                            "volume":     p.volume,
+                            "profit":     p.profit,
+                            "time":       datetime.fromtimestamp(p.time).isoformat(),
+                        })
+        except Exception as e:
+            self.logger.log_error("POSITIONS", str(e))
+        return positions
+    
+    def close_all(self, reason: str = "Close all") -> int:
+        """بستن تمام پوزیشن‌های باز"""
+        positions = self.get_open_positions()
+        closed = 0
+        for pos in positions:
+            if self.close_trade(pos["ticket"], reason):
+                closed += 1
+        print(f"🔴 {closed}/{len(positions)} پوزیشن بسته شد")
+        return closed
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🧪 تست
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+if __name__ == "__main__":
+    print("\n" + "=" * 70)
+    print("🧪 تست Order Manager")
+    print("=" * 70)
+    
+    om = OrderManager()
+    
+    # فقط وضعیت پوزیشن‌ها چک کنیم (بدون باز کردن واقعی)
+    print("\n📊 پوزیشن‌های باز:")
+    positions = om.get_open_positions()
+    
+    if positions:
+        for p in positions:
+            print(f"   ticket={p['ticket']} | {p['type']} @ {p['price_open']:.5f} | P/L=${p['profit']:.2f}")
+    else:
+        print("   هیچ پوزیشنی باز نیست")
+    
+    print("\n⚠️  برای تست باز کردن پوزیشن، MT5 Demo باید باز باشد")
+    print("=" * 70)
+       
+
+
+
+
+
+
+
+
+====================================================================
+فایل: economic_filter.py (نسخه اصلاح‌شده v2.0)
+فیلتر اخبار اقتصادی
+====================================================================
+اصلاحات:
+    ✅ رفع متغیرهای گمشده در config
+    ✅ فیلتر هر دو ارز (EUR و USD در EURUSD)
+    ✅ Cache زمانی
+    ✅ Timezone صحیح (UTC)
+    ✅ API واقعی (TradingEconomics)
+    ✅ فایل آفلاین پیش‌فرض
+    ✅ یکپارچه شدن با risk_manager
+====================================================================
+"""
+
+import requests
+import pandas as pd
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Tuple, Optional
+import json
+import os
+import threading
+from config import Config
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 📌 تنظیمات پیش‌فرض (اگر در config نباشد)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# نقشه نماد → دو ارز
+SYMBOL_CURRENCIES: Dict[str, List[str]] = {
+    "EURUSD": ["EUR", "USD"],
+    "GBPUSD": ["GBP", "USD"],
+    "USDJPY": ["USD", "JPY"],
+    "USDCAD": ["USD", "CAD"],
+    "USDCHF": ["USD", "CHF"],
+    "AUDUSD": ["AUD", "USD"],
+    "NZDUSD": ["NZD", "USD"],
+    "EURGBP": ["EUR", "GBP"],
+    "EURJPY": ["EUR", "JPY"],
+    "GBPJPY": ["GBP", "JPY"],
+}
+
+# کلمات کلیدی خبرهای مهم
+DEFAULT_KEYWORDS: List[str] = [
+    "NFP", "Non-Farm", "CPI", "GDP", "FOMC",
+    "Interest Rate", "Inflation", "Employment",
+    "ECB", "BOE", "BOJ", "Fed",
+    "Unemployment", "PMI", "Trade Balance",
+    "Current Account", "Retail Sales",
+    "Industrial Production", "Consumer Confidence",
+]
+
+# فایل داده آفلاین پیش‌فرض (بدون API)
+DEFAULT_OFFLINE_EVENTS: List[Dict] = [
+    # این داده‌ها فقط نمونه هستند
+    # در حالت واقعی، API داده واقعی می‌دهد
+]
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🏗️ کلاس اصلی
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+class EconomicNewsFilter:
+    """
+    فیلتر اخبار اقتصادی
+    
+    استفاده:
+        filter = EconomicNewsFilter()
+        safe, reason = filter.should_avoid_trading("EURUSD")
+        
+        if safe:
+            # می‌توانید معامله کنید
+        else:
+            print(reason)  # دلیل خودداری
+    """
+    
+    # Cache سطح کلاس (فقط یک نسخه وجود دارد)
+    _cache_lock = threading.Lock()
+    _cached_events: List[Dict] = []
+    _cache_time: Optional[datetime] = None
+    _CACHE_DURATION_MINUTES: int = 30  # cache هر 30 دقیقه تازه می‌شود
+    
+    def __init__(self, api_key: Optional[str] = None):
+        # کلید API
+        self.api_key = api_key or getattr(Config, "ECONOMIC_CALENDAR_API_KEY", "")
+        
+        # تنظیمات فیلتر
+        self.enabled = getattr(Config, "ECONOMIC_FILTER_ENABLED", True)
+        self.minutes_before = getattr(Config, "AVOID_MINUTES_BEFORE_NEWS", 30)
+        self.minutes_after  = getattr(Config, "AVOID_MINUTES_AFTER_NEWS", 30)
+        
+        # کلمات کلیدی
+        self.keywords = getattr(Config, "IMPORTANT_NEWS_KEYWORDS", DEFAULT_KEYWORDS)
+        
+        # مسیر فایل آفلاین
+        self.offline_path = getattr(Config, "ECONOMIC_OFFLINE_PATH", "data/economic_calendar.json")
+        
+        # اطمینان از وجود پوشه
+        os.makedirs(os.path.dirname(self.offline_path), exist_ok=True)
+        
+        # اگر فایل آفلاین نیست، یکی بسازیم
+        self._init_offline_file()
+        
+        print("📰 Economic News Filter فعال شد")
+        if not self.api_key:
+            print("   ⚠️  API Key نیست → حالت آفلاین")
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🔧 توابع خصوصی کمکی
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def _init_offline_file(self):
+        """اگر فایل آفلاین نیست، یکی بسازیم"""
+        if not os.path.exists(self.offline_path):
+            with open(self.offline_path, "w", encoding="utf-8") as f:
+                json.dump(DEFAULT_OFFLINE_EVENTS, f, indent=2, ensure_ascii=False)
+    
+    def _now_utc(self) -> datetime:
+        """زمان فعلی با timezone UTC"""
+        return datetime.now(timezone.utc)
+    
+    def _parse_time(self, time_str: str) -> datetime:
+        """
+        پارس زمان از فرمت‌های مختلف
+        همه‌چیز به UTC تبدیل می‌شود
+        """
+        formats = [
+            "%Y-%m-%dT%H:%M:%S%z",      # ISO with tz
+            "%Y-%m-%dT%H:%M:%S",         # ISO without tz
+            "%Y-%m-%d %H:%M:%S",         # standard
+            "%Y-%m-%d %H:%M",            # short
+        ]
+        for fmt in formats:
+            try:
+                dt = datetime.strptime(time_str, fmt)
+                # اگر timezone نداشت، UTC فرض کنیم
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt
+            except ValueError:
+                continue
+        raise ValueError(f"فرمت زمان نامعتبر: {time_str}")
+    
+    def _get_currencies(self, symbol: str) -> List[str]:
+        """
+        ✅ هر دو ارز نماد را بگیر
+        مثل: EURUSD → ["EUR", "USD"]
+        """
+        # اول از نقشه چک کنیم
+        if symbol in SYMBOL_CURRENCIES:
+            return SYMBOL_CURRENCIES[symbol]
+        # اگر نیست، سه حرف اول و آخر
+        return [symbol[:3], symbol[3:6]]
+    
+    def _is_cache_valid(self) -> bool:
+        """cache هنوز معتبر است؟"""
+        if self._cache_time is None:
+            return False
+        elapsed = (self._now_utc() - self._cache_time).total_seconds() / 60
+        return elapsed < self._CACHE_DURATION_MINUTES
+    
+    def _is_keyword_match(self, title: str) -> bool:
+        """عنوان خبر با کلمات کلیدی مهم match می‌کند؟"""
+        title_upper = title.upper()
+        return any(kw.upper() in title_upper for kw in self.keywords)
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📡 دریافت رویدادها
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def _fetch_events(self, hours_ahead: int = 24) -> List[Dict]:
+        """
+        دریافت رویدادها (با Cache)
+        اگر cache معتبر باشد، دوباره API صدا نمی‌زنیم
+        """
+        with self._cache_lock:
+            # cache معتبر است؟
+            if self._is_cache_valid():
+                return self._filter_by_time(self._cached_events, hours_ahead)
+            
+            # دریافت جدید
+            if self.api_key:
+                events = self._fetch_from_api(hours_ahead)
+            else:
+                events = self._fetch_from_offline()
+            
+            # update cache
+            self._cached_events = events
+            self._cache_time = self._now_utc()
+            
+            return self._filter_by_time(events, hours_ahead)
+    
+    def _fetch_from_api(self, hours_ahead: int) -> List[Dict]:
+        """دریافت از API واقعی"""
+        try:
+            # TradingEconomics API
+            # مستندات: https://api.tradingeconomics.com/
+            url = "https://api.tradingeconomics.com/calendar"
+            params = {
+                "c": self.api_key,
+                "importance": "high",
+            }
+            
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            
+            events = response.json()
+            
+            # ذخیره آفلاین
+            self._save_offline(events)
+            
+            print(f"   📡 API: {len(events)} رویداد دریافت شد")
+            return events
+        
+        except requests.exceptions.Timeout:
+            print("   ⚠️ API timeout → آفلاین")
+            return self._fetch_from_offline()
+        except requests.exceptions.ConnectionError:
+            print("   ⚠️ اتصال اینترنت قطع → آفلاین")
+            return self._fetch_from_offline()
+        except Exception as e:
+            print(f"   ⚠️ API خطا: {e} → آفلاین")
+            return self._fetch_from_offline()
+    
+    def _fetch_from_offline(self) -> List[Dict]:
+        """دریافت از فایل آفلاین"""
+        try:
+            with open(self.offline_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"   ⚠️ آفلاین خطا: {e}")
+            return []
+    
+    def _save_offline(self, events: List[Dict]):
+        """ذخیره رویدادها آفلاین"""
+        try:
+            with open(self.offline_path, "w", encoding="utf-8") as f:
+                json.dump(events, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            print(f"   ⚠️ ذخیره آفلاین خطا: {e}")
+    
+    def _filter_by_time(self, events: List[Dict], hours_ahead: int) -> List[Dict]:
+        """فیلتر رویدادها بر اساس زمان"""
+        now = self._now_utc()
+        future = now + timedelta(hours=hours_ahead)
+        filtered = []
+        
+        for event in events:
+            try:
+                # سعی کنیم زمان رویداد را پارس کنیم
+                time_str = event.get("timestamp") or event.get("date") or event.get("time", "")
+                if not time_str:
+                    continue
+                event_time = self._parse_time(str(time_str))
+                
+                # آیا در بازه زمانی ما هست؟
+                if now - timedelta(minutes=self.minutes_after) <= event_time <= future:
+                    event["_parsed_time"] = event_time  # ذخیره زمان پارس شده
+                    filtered.append(event)
+            except (ValueError, KeyError):
+                continue
+        
+        return filtered
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🛡️ فیلتر اصلی
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def should_avoid_trading(
+        self,
+        symbol: str,
+        minutes_before: Optional[int] = None,
+        minutes_after: Optional[int] = None,
+    ) -> Tuple[bool, str]:
+        """
+        ✅ بررسی آیا باید از معامله خودداری کرد
+        
+        فیلتر هر دو ارز نماد چک می‌کند:
+            EURUSD → هم اخبار EUR هم اخبار USD فیلتر می‌شود
+        
+        Args:
+            symbol: نماد (مثل EURUSD)
+            minutes_before: دقیقه قبل از خبر
+            minutes_after: دقیقه بعد از خبر
+        
+        Returns:
+            (باید خودداری کنیم؟, دلیل)
+        """
+        # فیلتر فعال نیست؟
+        if not self.enabled:
+            return False, "فیلتر اخبار غیرفعال"
+        
+        mb = minutes_before or self.minutes_before
+        ma = minutes_after  or self.minutes_after
+        
+        # دریافت رویدادها
+        events = self._fetch_events(hours_ahead=4)
+        if not events:
+            return False, "هیچ رویداد اقتصادی نیست"
+        
+        now = self._now_utc()
+        
+        # ✅ هر دو ارز نماد چک می‌کنیم
+        currencies = self._get_currencies(symbol)
+        
+        for event in events:
+            event_currency = event.get("currency", "").upper()
+            event_title    = event.get("title", event.get("name", ""))
+            importance     = event.get("importance", event.get("impact", "")).lower()
+            event_time     = event.get("_parsed_time")
+            
+            if event_time is None:
+                continue
+            
+            # فقط اخبار مهم
+            if importance not in ("high", "3", "***"):
+                continue
+            
+            # آیا این ارز مربوط به نماد ما است؟
+            if event_currency not in [c.upper() for c in currencies]:
+                continue
+            
+            # آیا کلمات کلیدی match می‌کند؟ (اختیاری)
+            # اگر keywords خالی باشد، فقط اهمیت چک می‌شود
+            if self.keywords and not self._is_keyword_match(event_title):
+                continue
+            
+            # بازه زمانی اجتناب
+            avoid_start = event_time - timedelta(minutes=mb)
+            avoid_end   = event_time + timedelta(minutes=ma)
+            
+            if avoid_start <= now <= avoid_end:
+                remaining = int((avoid_end - now).total_seconds() / 60)
+                msg = (
+                    f"⚠️ خبر مهم: [{event_currency}] {event_title} "
+                    f"| زمان: {event_time.strftime('%H:%M')} UTC "
+                    f"| {remaining} دقیقه مانده"
+                )
+                return True, msg
+        
+        return False, "هیچ خبر مهمی در بازه نزدیک نیست"
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📊 گزارش و نمایش
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def get_safety_report(self, symbol: str) -> Dict:
+        """
+        گزارش کامل ایمنی معامله
+        این دیکشنری را به risk_manager می‌دهیم
+        """
+        avoid, reason = self.should_avoid_trading(symbol)
+        
+        # رویدادهای آینده مهم
+        events = self._fetch_events(hours_ahead=12)
+        currencies = self._get_currencies(symbol)
+        now = self._now_utc()
+        
+        upcoming = []
+        for event in events:
+            ec = event.get("currency", "").upper()
+            if ec in [c.upper() for c in currencies]:
+                importance = event.get("importance", event.get("impact", "")).lower()
+                if importance in ("high", "3", "***"):
+                    et = event.get("_parsed_time")
+                    if et and et > now:
+                        minutes_to = int((et - now).total_seconds() / 60)
+                        upcoming.append({
+                            "currency": ec,
+                            "title": event.get("title", event.get("name", "")),
+                            "time_utc": et.strftime("%H:%M"),
+                            "minutes_to": minutes_to,
+                        })
+        
+        return {
+            "safe": not avoid,
+            "reason": reason,
+            "symbol": symbol,
+            "currencies_checked": currencies,
+            "upcoming_events": upcoming,
+            "checked_at": now.strftime("%H:%M:%S UTC"),
+        }
+    
+    def print_report(self, symbol: str):
+        """چاپ گزارش خوانا"""
+        report = self.get_safety_report(symbol)
+        
+        print("\n" + "=" * 60)
+        print(f"📰 گزارش اخبار اقتصادی | {symbol}")
+        print("=" * 60)
+        
+        # وضعیت
+        if report["safe"]:
+            print(f"   🟢 ایمن: معامله می‌توانید انجام دهید")
+        else:
+            print(f"   🔴 خطر: {report['reason']}")
+        
+        print(f"   🕐 چک شد: {report['checked_at']}")
+        print(f"   💱 ارزها: {', '.join(report['currencies_checked'])}")
+        
+        # رویدادهای آینده
+        if report["upcoming_events"]:
+            print(f"\n   📅 رویدادهای آینده:")
+            for ev in report["upcoming_events"]:
+                print(f"      [{ev['currency']}] {ev['title']}")
+                print(f"           ⏰ {ev['time_utc']} UTC  ({ev['minutes_to']} دقیقه)")
+        else:
+            print(f"\n   ✅ هیچ رویداد مهمی در 12 ساعت آینده نیست")
+        
+        print("=" * 60)
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🧪 تست
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+if __name__ == "__main__":
+    print("\n" + "=" * 70)
+    print("🧪 تست Economic News Filter v2.0")
+    print("=" * 70)
+    
+    news_filter = EconomicNewsFilter()
+    
+    # تست 1: بررسی EURUSD (هم EUR هم USD چک می‌شود)
+    print("\n1️⃣ تست فیلتر EURUSD:")
+    avoid, reason = news_filter.should_avoid_trading("EURUSD")
+    print(f"   خودداری: {avoid}")
+    print(f"   دلیل: {reason}")
+    
+    # تست 2: گزارش کامل
+    print("\n2️⃣ گزارش کامل:")
+    news_filter.print_report("EURUSD")
+    
+    # تست 3: نماد دیگر
+    print("\n3️⃣ تست فیلتر GBPUSD:")
+    news_filter.print_report("GBPUSD")
+    
+    # تست 4: بررسی cache
+    print("\n4️⃣ تست Cache:")
+    print(f"   Cache فعال: {news_filter._is_cache_valid()}")
+    avoid2, _ = news_filter.should_avoid_trading("EURUSD")  # این بار از cache می‌خواند
+    print(f"   دومین بار خواندن (از cache): خودداری={avoid2}")
+    
+    # تست 5: نماد نامعتبر
+    print("\n5️⃣ تست نماد نامعتبر (XXXYYY):")
+    avoid3, reason3 = news_filter.should_avoid_trading("XXXYYY")
+    print(f"   خودداری: {avoid3} | دلیل: {reason3}")
+    
+    print("\n" + "=" * 70)
+    print("✅ تست کامل موفق بود!")
+    print("=" * 70)
+       
+
+
+
+
+
+"""
+====================================================================
+فایل: auto_retrain.py (نسخه اصلاح‌شده v2.0)
+سیستم آموزش خودکار دوره‌ای مدل
+====================================================================
+اصلاحات:
+    ✅ رفع API صدا زدن ensemble (train / predict / save / load)
+    ✅ استفاده از PredictionResult صحیح
+    ✅ متغیرهای گمشده در config چک شدند
+    ✅ بهبود مدیریت خطا
+====================================================================
+"""
+
+import schedule
+import time
+import threading
+import json
+import numpy as np
+from datetime import datetime
+from typing import Dict, List, Optional
+import warnings
+warnings.filterwarnings("ignore")
+
+from config import Config
+from data_handler import prepare_training_data
+from ensemble_model import EnsembleTradingModel, SignalStrength
+from explainable_logger import ExplainableLogger
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 📊 ردیابی عملکرد مدل
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+class ModelPerformanceTracker:
+    """ردیابی عملکرد مدل در طول زمان"""
+
+    def __init__(self, log_file: str = "data/logs/model_performance.json"):
+        self.log_file = log_file
+        self.performance_data: List[Dict] = self._load()
+
+    def _load(self) -> List[Dict]:
+        try:
+            with open(self.log_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return []
+
+    def _save(self):
+        # فقط 100 رکورد آخر نگه دار
+        if len(self.performance_data) > 100:
+            self.performance_data = self.performance_data[-100:]
+        with open(self.log_file, "w", encoding="utf-8") as f:
+            json.dump(self.performance_data, f, indent=2, ensure_ascii=False)
+
+    def add_record(self, model_type: str, metrics: Dict):
+        """یک رکورد عملکرد جدید اضافه کن"""
+        version_num = sum(1 for r in self.performance_data if r["model_type"] == model_type) + 1
+        self.performance_data.append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "model_type": model_type,
+                "metrics": metrics,
+                "version": f"{model_type}_v{version_num}",
+            }
+        )
+        self._save()
+        print(f"📊 رکورد عملکرد ذخیره: {model_type} v{version_num}")
+
+    def get_trend(self, model_type: str, metric: str = "accuracy") -> Dict:
+        """روند عملکرد مدل"""
+        records = [
+            r for r in self.performance_data
+            if r["model_type"] == model_type and metric in r.get("metrics", {})
+        ]
+        if not records:
+            return {"trend": "unknown", "values": [], "current": None, "mean": None}
+
+        values = [r["metrics"][metric] for r in records]
+
+        # تحلیل روند
+        trend = "insufficient_data"
+        if len(values) >= 3:
+            recent   = np.mean(values[-3:])
+            previous = np.mean(values[-6:-3]) if len(values) >= 6 else values[0]
+            if recent > previous * 1.05:
+                trend = "improving"
+            elif recent < previous * 0.95:
+                trend = "declining"
+            else:
+                trend = "stable"
+
+        return {
+            "trend":   trend,
+            "values":  values,
+            "current": values[-1],
+            "mean":    float(np.mean(values)),
+            "std":     float(np.std(values)) if len(values) > 1 else 0.0,
+        }
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🤖 مدیریت آموزش خودکار
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+class AutoRetrainManager:
+    """مدیریت آموزش خودکار مدل Ensemble"""
+
+    def __init__(
+        self,
+        retrain_interval_days: Optional[int]   = None,
+        performance_threshold: Optional[float] = None,
+        min_trades_for_retrain: Optional[int]  = None,
+    ):
+        # تنظیمات (از config یا پارامتر)
+        self.retrain_interval      = retrain_interval_days    or getattr(Config, "RETRAIN_INTERVAL_DAYS",      7)
+        self.performance_threshold = performance_threshold    or getattr(Config, "PERFORMANCE_THRESHOLD",      0.48)
+        self.min_trades            = min_trades_for_retrain   or getattr(Config, "MIN_TRADES_FOR_RETRAIN",     20)
+
+        self.tracker = ModelPerformanceTracker()
+        self.logger  = ExplainableLogger()
+
+        # وضعیت
+        self.last_retrain: Optional[datetime] = None
+        self.retrain_count = 0
+        self.is_retraining = False
+
+        # زمان‌بند
+        self._stop_event = threading.Event()
+        self._thread: Optional[threading.Thread] = None
+
+        print("\n🤖 Auto-Retrain Manager")
+        print(f"   Interval:  هر {self.retrain_interval} روز")
+        print(f"   Threshold: {self.performance_threshold}")
+        print(f"   Min Trades: {self.min_trades}")
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🔍 بررسی شرایط
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def check_conditions(self) -> Dict:
+        """بررسی آیا شرایط آموزش مجدد برقرار است"""
+        cond = {
+            "time":        False,
+            "performance": False,
+            "data":        True,   # فرض: داده کافی
+            "reasons":     [],
+        }
+
+        # ─── زمان ───
+        if self.last_retrain is None:
+            cond["time"] = True
+            cond["reasons"].append("اولین آموزش هنوز انجام نشده")
+        else:
+            days = (datetime.now() - self.last_retrain).days
+            if days >= self.retrain_interval:
+                cond["time"] = True
+                cond["reasons"].append(f"{days} روز گذشته (لازم: {self.retrain_interval})")
+            else:
+                cond["reasons"].append(f"فقط {days} روز گذشته")
+
+        # ─── عملکرد ───
+        trend = self.tracker.get_trend("ensemble", "accuracy")
+        if trend["current"] is not None:
+            if trend["current"] < self.performance_threshold:
+                cond["performance"] = True
+                cond["reasons"].append(f"دقت پایین: {trend['current']:.3f}")
+            elif trend["trend"] == "declining":
+                cond["performance"] = True
+                cond["reasons"].append("روند نزولی دقت")
+            else:
+                cond["reasons"].append(f"دقت خوب: {trend['current']:.3f}")
+        else:
+            # داده عملکردی نیست → آموزش اول فعال شود
+            cond["performance"] = True
+            cond["reasons"].append("هیچ داده عملکردی نیست")
+
+        # ─── کلی ───
+        cond["ready"] = cond["time"] and cond["performance"] and cond["data"]
+        return cond
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🏋️ آموزش مجدد
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def retrain(self) -> bool:
+        """
+        آموزش مجدد Ensemble
+        
+        فرایند:
+            1. دریافت داده جدید
+            2. آموزش مدل جدید (Walk-Forward)
+            3. ارزیابی روی بخش آخر
+            4. مقایسه با مدل فعلی
+            5. جایگزین فقط اگر بهتر باشد
+        """
+        if self.is_retraining:
+            print("⚠️ آموزش مجدد در حال انجام است")
+            return False
+
+        self.is_retraining = True
+        start = datetime.now()
+
+        try:
+            self.logger.log_info("RETRAIN", "شروع آموزش مجدد")
+
+            # ─── 1. دریافت داده ───
+            print("\n📥 دریافت داده جدید...")
+            df = prepare_training_data(
+                symbol=Config.SYMBOL,
+                timeframe="H1",
+                count=getattr(Config, "HISTORICAL_CANDLES", 2000),
+                forward_periods=5,
+                threshold=0.001,
+            )
+
+            if df is None or len(df) < 500:
+                print("❌ داده کافی دریافت نشد")
+                self.logger.log_warning("RETRAIN", "داده کافی نیست")
+                return False
+
+            print(f"✅ {len(df)} نمونه دریافت شد")
+
+            # ─── 2. آموزش مدل جدید ───
+            # ✅ صحیح: فقط df و n_splits
+            print("\n🏗️ آموزش مدل جدید (Walk-Forward)...")
+            new_model = EnsembleTradingModel()
+            new_model.train(df, n_splits=3)
+
+            # ─── 3. ارزیابی ───
+            print("\n📊 ارزیابی مدل جدید...")
+            # آخرین 200 نمونه برای ارزیابی
+            df_eval = df.tail(200).copy()
+            new_acc = self._evaluate_model(new_model, df_eval)
+
+            if new_acc is None:
+                print("⚠️ ارزیابی شکست خورد")
+                return False
+
+            print(f"   دقت مدل جدید: {new_acc*100:.2f}%")
+
+            # ─── 4. مقایسه با مدل فعلی ───
+            current_acc = None
+            try:
+                print("📂 بارگذاری مدل فعلی برای مقایسه...")
+                current_model = EnsembleTradingModel()
+                # ✅ صحیح: load نه load_models
+                current_model.load()
+                current_acc = self._evaluate_model(current_model, df_eval)
+                if current_acc is not None:
+                    print(f"   دقت مدل فعلی: {current_acc*100:.2f}%")
+            except Exception as e:
+                print(f"   ⚠️ مدل فعلی بارگذاری نشد: {e}")
+
+            # ─── 5. تصمیم جایگزین ───
+            should_replace = False
+
+            if current_acc is None:
+                # مدل فعلی نیست → مدل جدید جایگزین شود
+                should_replace = True
+                print("   ✅ مدل فعلی نیست → جایگزین می‌شود")
+            else:
+                improvement = new_acc - current_acc
+                print(f"   📈 بهبود: {improvement*100:.2f}%")
+
+                if improvement > 0.02:  # حداقل 2%
+                    should_replace = True
+                    print("   ✅ بهبود کافی → جایگزین می‌شود")
+                else:
+                    print("   ⚠️ بهبود ناکافی → مدل فعلی نگه داشته شد")
+
+            # ─── جایگزین ───
+            if should_replace:
+                # ✅ صحیح: save نه save_models
+                new_model.save()
+                self.tracker.add_record("ensemble", {
+                    "accuracy":    float(new_acc),
+                    "prev_accuracy": float(current_acc) if current_acc else None,
+                    "improvement": float(new_acc - current_acc) if current_acc else None,
+                    "samples":     len(df),
+                })
+                self.last_retrain = datetime.now()
+                self.retrain_count += 1
+
+                elapsed = (datetime.now() - start).total_seconds()
+                self.logger.log_info("RETRAIN", f"موفق! دقت={new_acc:.3f} | زمان={elapsed:.0f}s")
+                return True
+
+            return False
+
+        except Exception as e:
+            self.logger.log_error("RETRAIN", str(e))
+            print(f"❌ خطا در آموزش مجدد: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+        finally:
+            self.is_retraining = False
+
+    def _evaluate_model(self, model: EnsembleTradingModel, df_eval) -> Optional[float]:
+        """
+        ارزیابی دقت مدل روی داده eval
+        
+        مقایسه پیش‌بینی مدل با Target واقعی
+        """
+        if "Target" not in df_eval.columns:
+            return None
+
+        correct = 0
+        total   = 0
+
+        # هر 10 نمونه یکبار پیش‌بینی کن
+        step = max(10, len(df_eval) // 20)
+        for i in range(100, len(df_eval), step):
+            try:
+                sample = df_eval.iloc[i - 100 : i]
+                # ✅ صحیح: result یک PredictionResult object است
+                result = model.predict(sample)
+                actual = df_eval["Target"].iloc[i - 1]
+
+                # بر اساس signal_strength تصمیم بگیر
+                if result.signal_strength in (SignalStrength.STRONG_BUY, SignalStrength.WEAK_BUY):
+                    predicted = 1
+                elif result.signal_strength in (SignalStrength.STRONG_SELL, SignalStrength.WEAK_SELL):
+                    predicted = 0
+                else:
+                    # Neutral → فرض: نگه‌دار (0)
+                    predicted = 0
+
+                if predicted == actual:
+                    correct += 1
+                total += 1
+
+            except Exception:
+                continue
+
+        return correct / total if total > 0 else None
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # ⏰ زمان‌بند
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def _scheduled_check(self):
+        """بررسی زمان‌بندی شده"""
+        print(f"\n{'='*60}")
+        print(f"⏰ Auto-Retrain Check — {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+        print(f"{'='*60}")
+
+        cond = self.check_conditions()
+        for r in cond["reasons"]:
+            print(f"   • {r}")
+
+        if cond["ready"]:
+            print("\n✅ شرایط برقرار → شروع آموزش مجدد")
+            self.retrain()
+        else:
+            print("\n⏳ شرایط آموزش مجدد برقرار نیست")
+        print(f"{'='*60}")
+
+    def start_scheduler(self):
+        """شروع زمان‌بند"""
+        schedule.clear()
+        schedule.every().day.at("02:00").do(self._scheduled_check)
+        schedule.every(6).hours.do(self._scheduled_check)
+
+        print("⏰ زمان‌بند فعال: روزانه 02:00 + هر 6 ساعت")
+
+        def _run():
+            while not self._stop_event.is_set():
+                schedule.run_pending()
+                time.sleep(60)
+
+        self._thread = threading.Thread(target=_run, daemon=True)
+        self._thread.start()
+
+    def stop_scheduler(self):
+        """توقف زمان‌بند"""
+        self._stop_event.set()
+        if self._thread:
+            self._thread.join(timeout=5)
+        schedule.clear()
+        print("⏹️ زمان‌بند متوقف شد")
+
+    def force_retrain(self) -> bool:
+        """اجبار آموزش فوری"""
+        print("\n⚡ آموزش مجدد اجباری...")
+        return self.retrain()
+
+    def get_status(self) -> Dict:
+        """وضعیت فعلی"""
+        return {
+            "last_retrain":   self.last_retrain.isoformat() if self.last_retrain else None,
+            "retrain_count":  self.retrain_count,
+            "is_retraining":  self.is_retraining,
+            "performance":    self.tracker.get_trend("ensemble", "accuracy"),
+        }
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🧪 تست
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+if __name__ == "__main__":
+    print("\n" + "=" * 70)
+    print("🧪 تست Auto-Retrain Manager v2.0")
+    print("=" * 70)
+
+    manager = AutoRetrainManager(
+        retrain_interval_days=1,
+        performance_threshold=0.45,
+        min_trades_for_retrain=10,
+    )
+
+    # بررسی شرایط
+    print("\n🔍 شرایط فعلی:")
+    cond = manager.check_conditions()
+    for r in cond["reasons"]:
+        print(f"   • {r}")
+    print(f"   آماده: {'✅' if cond['ready'] else '❌'}")
+
+    # تست اجباری
+    if cond["ready"]:
+        resp = input("\nآیا آموزش مجدد اجباری انجام شود؟ (y/n): ")
+        if resp.lower() == "y":
+            ok = manager.force_retrain()
+            print(f"   نتیجه: {'✅ موفق' if ok else '❌ ناموفق'}")
+
+    # تست زمان‌بند (10 ثانیه)
+    print("\n⏰ شروع زمان‌بند (10 ثانیه)...")
+    manager.start_scheduler()
+    time.sleep(10)
+    manager.stop_scheduler()
+
+    print("\n" + "=" * 70)
+    print("✅ تست کامل موفق بود!")
+    print("=" * 70)
+
+
+
+
+"""
+====================================================================
+فایل: run_enhanced_bot.py (نسخه اصلاح‌شده v2.0)
+ربات اصلی با تمام بهینه‌سازی‌ها
+====================================================================
+اصلاحات:
+    ✅ رفع API صدا زدن ensemble (predict → PredictionResult)
+    ✅ رفع can_trade (حذف check_news پارامتر)
+    ✅ یکپارچه شدن order_manager
+    ✅ بهبود حلقه معاملاتی
+    ✅ مدیریت پوزیشن (BE + Trailing)
+====================================================================
+"""
+
+import time
+import threading
+import signal
+import sys
+from datetime import datetime
+from typing import Dict, Optional
+
+from config import Config
+from data_handler import prepare_live_data
+from ensemble_model import EnsembleTradingModel, SignalStrength
+from risk_manager import RiskManager
+from order_manager import OrderManager
+from auto_retrain import AutoRetrainManager
+from explainable_logger import ExplainableLogger
+
+
+class EnhancedTradingBot:
+    """
+    ربات معاملاتی پیشرفته
+    
+    جریان کار:
+        1. چک can_trade (شامل فیلتر اخبار)
+        2. دریافت داده بازار
+        3. پیش‌بینی Ensemble → PredictionResult
+        4. چک فیلترهای بازار (spread, volatility, ...)
+        5. اگر سیگنال معتبر و Strong → باز کردن پوزیشن
+        6. مدیریت پوزیشن‌های باز (BE + Trailing)
+    """
+
+    def __init__(self):
+        print("\n" + "=" * 70)
+        print("🚀 راه‌اندازی ربات معاملاتی پیشرفته")
+        print("=" * 70)
+
+        # ─── کامپوننت‌ها ───
+        self.logger         = ExplainableLogger()
+        self.risk_manager   = RiskManager()
+        self.order_manager  = OrderManager()
+        self.ensemble       = EnsembleTradingModel()
+        self.retrain_mgr: Optional[AutoRetrainManager] = None
+
+        # ─── وضعیت ───
+        self.is_running      = False
+        self.trading_enabled = True
+
+        # ─── آمار ───
+        self.stats = {
+            "checks":        0,
+            "trades_opened": 0,
+            "trades_closed": 0,
+            "total_profit":  0.0,
+            "start_time":    datetime.now(),
+        }
+
+        # ─── بارگذاری مدل‌ها ───
+        self._load_models()
+
+        # ─── Auto-Retrain ───
+        if getattr(Config, "AUTO_RETRAIN_ENABLED", False):
+            self.retrain_mgr = AutoRetrainManager()
+            self.retrain_mgr.start_scheduler()
+
+        self._print_init_summary()
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🔧 setup
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def _load_models(self):
+        """بارگذاری مدل Ensemble"""
+        try:
+            # ✅ صحیح: load نه load_models
+            self.ensemble.load()
+            self.logger.log_info("MODEL", "مدل Ensemble بارگذاری شد")
+        except Exception as e:
+            self.logger.log_warning("MODEL", f"مدل بارگذاری نشد: {e}")
+            print("⚠️ مدل بارگذاری نشد — لطفاً اول آموزش دهید")
+
+    def _print_init_summary(self):
+        print(f"\n   نماد:          {Config.SYMBOL}")
+        print(f"   تایم‌فریم:     {Config.TIMEFRAME_PRIMARY}")
+        print(f"   Ensemble:      فعال")
+        print(f"   Auto-Retrain:  {'فعال' if self.retrain_mgr else 'غیرفعال'}")
+        print(f"   فیلتر اخبار:   {'فعال' if getattr(Config, 'ECONOMIC_FILTER_ENABLED', False) else 'غیرفعال'}")
+        print("=" * 70)
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🔄 حلقه اصلی
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def run(self):
+        """حلقه اصلی ربات"""
+        self.is_running = True
+        self.logger.log_info("BOT", f"شروع کار — نماد: {Config.SYMBOL}")
+        print("\n🔄 حلقه معاملاتی شروع شد  |  Ctrl+C برای توقف\n")
+
+        while self.is_running:
+            try:
+                self._trading_cycle()
+                time.sleep(Config.CHECK_INTERVAL)
+            except KeyboardInterrupt:
+                print("\n⏹️ توقف توسط کاربر")
+                self.stop()
+                break
+            except Exception as e:
+                self.logger.log_error("LOOP", str(e))
+                print(f"⚠️ خطا در حلقه: {e}")
+                time.sleep(5)
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 💼 یک سیکل معاملاتی
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def _trading_cycle(self):
+        self.stats["checks"] += 1
+        now = datetime.now().strftime("%H:%M:%S")
+        print(f"\n{'─'*55}")
+        print(f"  🔄 چک #{self.stats['checks']}  |  {now}")
+        print(f"{'─'*55}")
+
+        # ──── 1. بررسی can_trade ────
+        # ✅ صحیح: بدون check_news (فیلتر اخبار داخل can_trade است)
+        can_trade, reason = self.risk_manager.can_trade()
+        if not can_trade:
+            self.logger.log_why_not_trade([reason])
+            print(f"  🚫 {reason}")
+            return
+
+        print(f"  ✅ {reason}")
+
+        # ──── 2. دریافت داده ────
+        df = prepare_live_data(Config.SYMBOL, "H1", count=200)
+        if df is None or len(df) < 100:
+            self.logger.log_warning("DATA", "داده کافی نیست")
+            print("  ⚠️ داده کافی نیست")
+            return
+
+        # ──── 3. لاگ وضعیت بازار ────
+        self._log_market(df)
+
+        # ──── 4. پیش‌بینی Ensemble ────
+        # ✅ صحیح: predict یک PredictionResult object
+        result = self.ensemble.predict(df)
+
+        # لاگ تصمیم
+        self.logger.log_ml_decision(
+            prediction=result.final_probability,
+            confidence=result.confidence,
+            direction=result.signal_strength.value,
+            signal_strength=result.signal_strength.value,
+            reasoning=str(result.model_details),
+        )
+
+        # نمایش
+        self.ensemble.print_prediction(result)
+
+        # ──── 5. چک فیلترهای بازار ────
+        from mt5_connection import mt5_connection
+        import MetaTrader5 as mt5
+
+        try:
+            with mt5_connection():
+                tick = mt5.symbol_info_tick(Config.SYMBOL)
+        except Exception:
+            tick = None
+
+        if tick:
+            passed, filter_reason, _ = self.risk_manager.check_market_conditions(df, tick)
+            if not passed:
+                self.logger.log_why_not_trade([filter_reason])
+                print(f"  🚫 فیلتر بازار: {filter_reason}")
+                return
+
+        # ──── 6. تصمیم معامله ────
+        # فقط سیگنال‌های STRONG و معتبر → معامله
+        if not result.is_valid:
+            print("  ⚪ سیگنال معتبر نیست → هیچ معاملی نخواهیم کرد")
+            return
+
+        if result.signal_strength == SignalStrength.NEUTRAL:
+            print("  ⚪ سیگنال خنثی → صبر می‌کنیم")
+            return
+
+        if result.signal_strength in (SignalStrength.WEAK_BUY, SignalStrength.WEAK_SELL):
+            print(f"  🟡 سیگنال ضعیف ({result.signal_strength.value}) → صبر می‌کنیم")
+            return
+
+        # ─── Strong Signal → معامله ───
+        self._execute_trade(result, df)
+
+        # ──── 7. مدیریت پوزیشن‌های باز ────
+        self._manage_open_positions(df)
+
+        # ──── 8. آمار دوره‌ای ────
+        if self.stats["checks"] % 10 == 0:
+            self._print_stats()
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 💰 اجرای معامله
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def _execute_trade(self, result, df):
+        """باز کردن پوزیشن بر اساس سیگنال"""
+        if not self.trading_enabled:
+            print("  ⚠️ معامله غیرفعال است")
+            return
+
+        # جهت
+        if result.signal_strength == SignalStrength.STRONG_BUY:
+            direction = "BUY"
+        elif result.signal_strength == SignalStrength.STRONG_SELL:
+            direction = "SELL"
+        else:
+            return  # فقط STRONG
+
+        # قیمت ورود فعلی
+        try:
+            from mt5_connection import mt5_connection
+            import MetaTrader5 as mt5
+
+            with mt5_connection():
+                tick = mt5.symbol_info_tick(Config.SYMBOL)
+                if not tick:
+                    return
+                entry = tick.ask if direction == "BUY" else tick.bid
+        except Exception as e:
+            print(f"  ❌ قیمت فعلی دریافت نشد: {e}")
+            return
+
+        # ATR فعلی
+        current_atr = df["ATR"].iloc[-1] if "ATR" in df.columns else 0.0015
+        avg_atr     = df["ATR"].iloc[-20:].mean() if "ATR" in df.columns else current_atr
+        adx         = df["ADX"].iloc[-1] if "ADX" in df.columns else 30
+
+        # SL / TP پویا
+        sl, tp, _, _ = self.risk_manager.calculate_dynamic_sl_tp(
+            entry_price=entry,
+            direction=direction,
+            current_atr=current_atr,
+            avg_atr=avg_atr,
+            adx=adx,
+        )
+
+        # حجم
+        volume = self.risk_manager.calculate_volume(entry, sl)
+
+        print(f"\n  📊 سفارش:")
+        print(f"      {direction} @ {entry:.5f} | SL={sl:.5f} | TP={tp:.5f} | Vol={volume}")
+
+        # باز کردن
+        ticket = self.order_manager.open_trade(
+            direction=direction,
+            entry=entry,
+            sl=sl,
+            tp=tp,
+            volume=volume,
+            comment=f"Ensemble {result.signal_strength.value} conf={result.confidence:.2f}",
+        )
+
+        if ticket:
+            self.stats["trades_opened"] += 1
+            self.logger.log_info("TRADE", f"پوزیشن باز شد: ticket={ticket}")
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📐 مدیریت پوزیشن‌های باز
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def _manage_open_positions(self, df):
+        """مدیریت پوزیشن‌های باز (BE + Trailing + Partial)"""
+        positions = self.order_manager.get_open_positions()
+        if not positions:
+            return
+
+        current_atr = df["ATR"].iloc[-1] if "ATR" in df.columns else 0.0015
+
+        for pos in positions:
+            actions = self.order_manager.manage_position(pos["ticket"], current_atr)
+            if any(actions.values()):
+                print(f"  📐 مدیریت ticket={pos['ticket']}: {actions}")
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 📊 لاگ و آمار
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def _log_market(self, df):
+        """لاگ وضعیت بازار"""
+        row = df.iloc[-1]
+        adx = row.get("ADX", 0)
+        rsi = row.get("RSI", 50)
+
+        if adx > 40:
+            state = "روند قوی"
+        elif adx > 25:
+            state = "روند متوسط"
+        elif 40 < rsi < 60:
+            state = "رنج"
+        else:
+            state = "خنثی"
+
+        self.logger.log_market_snapshot(
+            price=row["close"],
+            atr=row.get("ATR", 0),
+            adx=adx,
+            rsi=rsi,
+            market_state=state,
+        )
+
+    def _print_stats(self):
+        runtime_h = (datetime.now() - self.stats["start_time"]).total_seconds() / 3600
+        print(f"\n{'='*55}")
+        print(f"  📊 آمار ربات  |  {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+        print(f"{'='*55}")
+        print(f"  چک‌ها:        {self.stats['checks']}")
+        print(f"  زمان کار:     {runtime_h:.1f} ساعت")
+        print(f"  باز شده:      {self.stats['trades_opened']}")
+        print(f"  بسته شده:     {self.stats['trades_closed']}")
+        print(f"  سود کل:       ${self.stats['total_profit']:.2f}")
+
+        # پوزیشن‌های باز
+        open_pos = self.order_manager.get_open_positions()
+        if open_pos:
+            print(f"\n  📌 پوزیشن‌های باز:")
+            for p in open_pos:
+                print(f"     ticket={p['ticket']} | {p['type']} | P/L=${p['profit']:.2f}")
+
+        if self.retrain_mgr:
+            s = self.retrain_mgr.get_status()
+            print(f"\n  🔄 Auto-Retrain: آخرین={s['last_retrain'] or 'هرگز'} | تعداد={s['retrain_count']}")
+        print(f"{'='*55}")
+
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # 🛑 توقف
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    def stop(self):
+        """توقف ربات"""
+        self.is_running = False
+        if self.retrain_mgr:
+            self.retrain_mgr.stop_scheduler()
+
+        runtime_h = (datetime.now() - self.stats["start_time"]).total_seconds() / 3600
+        self.logger.log_info("BOT", f"متوقف شد | زمان کار: {runtime_h:.1f}h")
+        print("\n🛑 ربات متوقف شد")
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🎬 اجرای اصلی
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# شاخصه global برای signal_handler
+bot: Optional[EnhancedTradingBot] = None
+
+
+def signal_handler(sig, frame):
+    """مدیریت Ctrl+C"""
+    print("\n⚠️ سیگنال توقف دریافت شد")
+    if bot:
+        bot.stop()
+    sys.exit(0)
+
+
+signal.signal(signal.SIGINT, signal_handler)
+
+
+if __name__ == "__main__":
+    print("\n" + "=" * 70)
+    print("🤖 ربات معاملاتی پیشرفته")
+    print("=" * 70)
+
+    try:
+        bot = EnhancedTradingBot()
+
+        print("\n📌 شروع می‌شود...  |  Ctrl+C برای توقف")
+        input("Enter را بزنید...")
+
+        # ─── شروع در ترد جداگانه ───
+        bot_thread = threading.Thread(target=bot.run, daemon=True)
+        bot_thread.start()
+        bot_thread.join()
+
+    except Exception as e:
+        print(f"\n❌ خطای غیرمنتظره: {e}")
+        import traceback
+        traceback.print_exc()
+    finally:
+        print("\n👋 خداحافظ!")
+

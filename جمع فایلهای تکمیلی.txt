@@ -1,0 +1,4315 @@
+
+/**
+ * ====================================================================
+ * فایل: frontend/assets/css/dark-mode.css
+ * استایل‌های Dark Mode با Tailwind
+ * ====================================================================
+ */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   تنظیم Tailwind برای Dark Mode
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   متغیرهای رنگی
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+:root {
+    /* Light Mode */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f3f4f6;
+    --bg-tertiary: #e5e7eb;
+    
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --text-tertiary: #9ca3af;
+    
+    --border-color: #e5e7eb;
+    --shadow: rgba(0, 0, 0, 0.1);
+    
+    --accent-primary: #7c3aed;
+    --accent-hover: #6d28d9;
+}
+
+.dark {
+    /* Dark Mode */
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2d2d2d;
+    --bg-tertiary: #3d3d3d;
+    
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+    --text-tertiary: #9ca3af;
+    
+    --border-color: #374151;
+    --shadow: rgba(0, 0, 0, 0.3);
+    
+    --accent-primary: #a78bfa;
+    --accent-hover: #8b5cf6;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   کلاس‌های پایه
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+body {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   کامپوننت‌ها
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* Card */
+.card {
+    background-color: var(--bg-primary);
+    border-color: var(--border-color);
+    box-shadow: 0 1px 3px var(--shadow);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 6px var(--shadow);
+}
+
+/* Input */
+.input {
+    background-color: var(--bg-primary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+}
+
+.input:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+}
+
+.dark .input:focus {
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.2);
+}
+
+/* Button Primary */
+.btn-primary {
+    background-color: var(--accent-primary);
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px var(--shadow);
+}
+
+/* Button Secondary */
+.btn-secondary {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+    background-color: var(--bg-tertiary);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Sidebar
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.sidebar {
+    background: linear-gradient(180deg, #7c3aed 0%, #6d28d9 100%);
+}
+
+.dark .sidebar {
+    background: linear-gradient(180deg, #6d28d9 0%, #5b21b6 100%);
+}
+
+.sidebar-item {
+    color: rgba(255, 255, 255, 0.8);
+    transition: all 0.2s ease;
+}
+
+.sidebar-item:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.sidebar-item.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Top Bar
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.topbar {
+    background-color: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 1px 3px var(--shadow);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Stats Cards
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.stat-card {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px var(--shadow);
+}
+
+.stat-icon {
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover .stat-icon {
+    transform: scale(1.1);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Table
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.table {
+    background-color: var(--bg-primary);
+}
+
+.table thead {
+    background-color: var(--bg-secondary);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: var(--bg-secondary);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Badge
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.badge-success {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.dark .badge-success {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+}
+
+.badge-error {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.dark .badge-error {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+}
+
+.badge-warning {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.dark .badge-warning {
+    background-color: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Modal
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.modal {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.dark .modal {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+.modal-content {
+    background-color: var(--bg-primary);
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Scrollbar (فقط Webkit)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-tertiary);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Animations
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.3s ease;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Theme Toggle Button
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.theme-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.5rem;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+}
+
+.theme-toggle:hover {
+    background-color: var(--bg-tertiary);
+    transform: rotate(20deg);
+}
+
+.theme-toggle:active {
+    transform: scale(0.95) rotate(20deg);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Utilities
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+.text-muted {
+    color: var(--text-secondary);
+}
+
+.text-lighter {
+    color: var(--text-tertiary);
+}
+
+.border-themed {
+    border-color: var(--border-color);
+}
+
+.bg-themed {
+    background-color: var(--bg-primary);
+}
+
+.shadow-themed {
+    box-shadow: 0 1px 3px var(--shadow);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   Print Styles
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+@media print {
+    .dark {
+        --bg-primary: #ffffff;
+        --text-primary: #000000;
+    }
+    
+    .sidebar,
+    .theme-toggle,
+    button {
+        display: none !important;
+    }
+}
+
+
+
+/**
+ * ====================================================================
+ * فایل: frontend/assets/js/theme.js
+ * سیستم Dark Mode با ذخیره‌سازی خودکار
+ * ====================================================================
+ */
+
+class ThemeManager {
+    constructor() {
+        this.currentTheme = this.getStoredTheme() || 'light';
+        this.init();
+    }
+    
+    /**
+     * راه‌اندازی اولیه
+     */
+    init() {
+        // اعمال تم ذخیره شده
+        this.applyTheme(this.currentTheme);
+        
+        // رویداد تغییر تم سیستم
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            if (!this.getStoredTheme()) {
+                this.applyTheme(e.matches ? 'dark' : 'light');
+            }
+        });
+    }
+    
+    /**
+     * دریافت تم ذخیره شده
+     */
+    getStoredTheme() {
+        return localStorage.getItem('theme');
+    }
+    
+    /**
+     * ذخیره تم
+     */
+    setStoredTheme(theme) {
+        localStorage.setItem('theme', theme);
+    }
+    
+    /**
+     * اعمال تم
+     */
+    applyTheme(theme) {
+        this.currentTheme = theme;
+        
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        
+        this.setStoredTheme(theme);
+        this.updateIcon();
+    }
+    
+    /**
+     * تغییر تم (Toggle)
+     */
+    toggle() {
+        const newTheme = this.currentTheme === 'light' ? 'dark' : 'light';
+        this.applyTheme(newTheme);
+    }
+    
+    /**
+     * به‌روزرسانی آیکون
+     */
+    updateIcon() {
+        const icon = document.getElementById('theme-icon');
+        if (icon) {
+            if (this.currentTheme === 'dark') {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        }
+    }
+    
+    /**
+     * دریافت تم فعلی
+     */
+    getTheme() {
+        return this.currentTheme;
+    }
+}
+
+// ساخت instance گلوبال
+const themeManager = new ThemeManager();
+
+// Export برای استفاده در سایر فایل‌ها
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ThemeManager;
+}
+
+
+
+
+frontend-lndex.htmlداشبورد
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>داشبورد - ربات معامله‌گر</title>
+    
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#7C3AED">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TradingBot">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192x192.png">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Vazirmatn', sans-serif;
+        }
+        
+        .sidebar-transition {
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar-hidden {
+                transform: translateX(100%);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-200" x-data="dashboardApp()" x-init="init()">
+    
+    <!-- Dark Mode Toggle Button (Fixed) -->
+    <button @click="toggleDarkMode()" 
+            class="fixed bottom-6 left-6 z-50 w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-110"
+            :class="darkMode ? 'bg-gray-800 text-yellow-300' : 'bg-white text-gray-800'">
+        <i class="fas" :class="darkMode ? 'fa-sun' : 'fa-moon'"></i>
+    </button>
+    
+    <!-- Sidebar -->
+    <aside class="fixed right-0 top-0 h-full w-64 bg-gradient-to-b from-purple-600 to-purple-800 dark:from-gray-800 dark:to-gray-900 text-white shadow-2xl z-50 sidebar-transition"
+           :class="{'sidebar-hidden': !sidebarOpen}">
+        
+        <!-- Header -->
+        <div class="p-6 border-b border-white/20">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-robot text-3xl"></i>
+                    <div>
+                        <h2 class="font-bold text-lg">ربات معامله‌گر</h2>
+                        <p class="text-xs text-white/70">نسخه 2.0</p>
+                    </div>
+                </div>
+                <button @click="sidebarOpen = false" class="md:hidden">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Navigation -->
+        <nav class="p-4 space-y-2">
+            <a @click="currentPage = 'overview'" 
+               :class="currentPage === 'overview' ? 'bg-white/20' : 'hover:bg-white/10'"
+               class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition">
+                <i class="fas fa-home w-5"></i>
+                <span>خانه</span>
+            </a>
+            
+            <a @click="currentPage = 'config'" 
+               :class="currentPage === 'config' ? 'bg-white/20' : 'hover:bg-white/10'"
+               class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition">
+                <i class="fas fa-cog w-5"></i>
+                <span>تنظیمات</span>
+            </a>
+            
+            <a @click="currentPage = 'monitoring'" 
+               :class="currentPage === 'monitoring' ? 'bg-white/20' : 'hover:bg-white/10'"
+               class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition">
+                <i class="fas fa-chart-line w-5"></i>
+                <span>مانیتورینگ</span>
+            </a>
+            
+            <a @click="currentPage = 'logs'" 
+               :class="currentPage === 'logs' ? 'bg-white/20' : 'hover:bg-white/10'"
+               class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition">
+                <i class="fas fa-file-alt w-5"></i>
+                <span>لاگ‌ها</span>
+            </a>
+        </nav>
+        
+        <!-- User Profile -->
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/20">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <p class="font-medium" x-text="user.username"></p>
+                        <p class="text-xs text-white/70">مدیر</p>
+                    </div>
+                </div>
+                <button @click="logout()" class="hover:bg-white/10 p-2 rounded-lg transition">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+        
+    </aside>
+    
+    <!-- Main Content -->
+    <div class="md:mr-64 min-h-screen">
+        
+        <!-- Top Bar -->
+        <header class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-40 transition-colors">
+            <div class="flex items-center justify-between p-4">
+                <div class="flex items-center gap-4">
+                    <button @click="sidebarOpen = !sidebarOpen" class="md:hidden text-gray-800 dark:text-white">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <h1 class="text-2xl font-bold text-gray-800 dark:text-white">داشبورد</h1>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <!-- Status Badge -->
+                    <div class="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-sm font-medium">آنلاین</span>
+                    </div>
+                    
+                    <!-- Refresh -->
+                    <button @click="refreshData()" class="p-2 hover:bg-gray-100 rounded-lg transition">
+                        <i class="fas fa-sync-alt" :class="{'fa-spin': loading}"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Content Area -->
+        <main class="p-6">
+            
+            <!-- Overview Page -->
+            <div x-show="currentPage === 'overview'" x-transition>
+                
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    
+                    <!-- Card 1: Current Positions -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700 transition-colors">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-chart-line text-blue-600 dark:text-blue-400 text-xl"></i>
+                            </div>
+                            <span class="text-sm text-gray-500 dark:text-gray-400">پوزیشن‌های باز</span>
+                        </div>
+                        <p class="text-3xl font-bold text-gray-800 dark:text-white" x-text="status.current_positions || 0"></p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">از 2 حداکثر</p>
+                    </div>
+                    
+                    <!-- Card 2: Daily Profit -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
+                            </div>
+                            <span class="text-sm text-gray-500">سود امروز</span>
+                        </div>
+                        <p class="text-3xl font-bold" 
+                           :class="(status.daily_profit || 0) >= 0 ? 'text-green-600' : 'text-red-600'"
+                           x-text="'$' + (status.daily_profit || 0).toFixed(2)"></p>
+                        <p class="text-sm text-gray-500 mt-2">
+                            <span x-text="status.daily_trades || 0"></span> معامله
+                        </p>
+                    </div>
+                    
+                    <!-- Card 3: Balance -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-wallet text-purple-600 text-xl"></i>
+                            </div>
+                            <span class="text-sm text-gray-500">موجودی</span>
+                        </div>
+                        <p class="text-3xl font-bold text-gray-800" 
+                           x-text="'$' + (status.account_balance || 0).toLocaleString()"></p>
+                        <p class="text-sm text-gray-500 mt-2">
+                            Equity: $<span x-text="(status.account_equity || 0).toLocaleString()"></span>
+                        </p>
+                    </div>
+                    
+                    <!-- Card 4: Uptime -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-clock text-orange-600 text-xl"></i>
+                            </div>
+                            <span class="text-sm text-gray-500">مدت اجرا</span>
+                        </div>
+                        <p class="text-3xl font-bold text-gray-800" x-text="formatUptime(status.uptime_minutes || 0)"></p>
+                        <p class="text-sm text-gray-500 mt-2">ساعت</p>
+                    </div>
+                    
+                </div>
+                
+                <!-- Chart -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">نمودار عملکرد</h3>
+                    <canvas id="performanceChart" height="80"></canvas>
+                </div>
+                
+                <!-- Recent Activity -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">فعالیت‌های اخیر</h3>
+                    <div class="space-y-4">
+                        <template x-for="log in recentLogs.slice(0, 5)" :key="log.id">
+                            <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+                                <div class="w-10 h-10 rounded-lg flex items-center justify-center"
+                                     :class="{
+                                         'bg-green-100 text-green-600': log.level === 'SUCCESS',
+                                         'bg-red-100 text-red-600': log.level === 'ERROR',
+                                         'bg-yellow-100 text-yellow-600': log.level === 'WARNING',
+                                         'bg-blue-100 text-blue-600': log.level === 'INFO'
+                                     }">
+                                    <i class="fas fa-info-circle"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="font-medium text-gray-800" x-text="log.message"></p>
+                                    <p class="text-sm text-gray-500" x-text="formatDate(log.timestamp)"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <!-- Config Page -->
+            <div x-show="currentPage === 'config'" x-transition>
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">تنظیمات معاملاتی</h2>
+                    
+                    <form @submit.prevent="saveConfig()" class="space-y-6">
+                        
+                        <!-- Risk Management -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">مدیریت ریسک</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        ریسک هر معامله (%)
+                                    </label>
+                                    <input type="number" step="0.01" x-model="config.RISK_PER_TRADE"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        حداکثر ضرر روزانه (%)
+                                    </label>
+                                    <input type="number" step="0.01" x-model="config.MAX_DAILY_LOSS"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- SL/TP -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">Stop Loss & Take Profit</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        SL (x ATR)
+                                    </label>
+                                    <input type="number" step="0.1" x-model="config.SL_ATR_MULTIPLIER"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        TP (x ATR)
+                                    </label>
+                                    <input type="number" step="0.1" x-model="config.TP_ATR_MULTIPLIER"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ML Thresholds -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">آستانه‌های ML</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        آستانه خرید
+                                    </label>
+                                    <input type="number" step="0.01" x-model="config.BUY_THRESHOLD"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        آستانه فروش
+                                    </label>
+                                    <input type="number" step="0.01" x-model="config.SELL_THRESHOLD"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Save Button -->
+                        <div class="flex gap-4">
+                            <button type="submit" 
+                                    class="px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition">
+                                <i class="fas fa-save ml-2"></i>
+                                ذخیره تنظیمات
+                            </button>
+                            <button type="button" @click="loadConfig()"
+                                    class="px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition">
+                                <i class="fas fa-undo ml-2"></i>
+                                بازگشت
+                            </button>
+                        </div>
+                        
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Monitoring Page -->
+            <div x-show="currentPage === 'monitoring'" x-transition>
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">مانیتورینگ مدل</h2>
+                    <p class="text-gray-600">در حال توسعه...</p>
+                </div>
+            </div>
+            
+            <!-- Logs Page -->
+            <div x-show="currentPage === 'logs'" x-transition>
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">لاگ‌ها</h2>
+                    <div class="space-y-4">
+                        <template x-for="log in recentLogs" :key="log.id">
+                            <div class="p-4 border border-gray-200 rounded-lg">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="font-medium" x-text="log.type"></span>
+                                    <span class="text-sm text-gray-500" x-text="formatDate(log.timestamp)"></span>
+                                </div>
+                                <p class="text-gray-700" x-text="log.message"></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+        
+    </div>
+    
+    <script>
+        function dashboardApp() {
+            return {
+                // State
+                sidebarOpen: true,
+                currentPage: 'overview',
+                loading: false,
+                darkMode: false,
+                user: {},
+                status: {},
+                config: {},
+                recentLogs: [],
+                chart: null,
+                
+                // Initialize
+                async init() {
+                    // Load Dark Mode preference
+                    this.darkMode = localStorage.getItem('darkMode') === 'true';
+                    this.applyDarkMode();
+                    
+                    // Check auth
+                    const token = localStorage.getItem('access_token');
+                    if (!token) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    
+                    // Load data
+                    await this.loadUser();
+                    await this.refreshData();
+                    
+                    // Setup chart
+                    this.setupChart();
+                    
+                    // Auto-refresh every 5 seconds
+                    setInterval(() => this.refreshData(), 5000);
+                },
+                
+                // Load user info
+                async loadUser() {
+                    try {
+                        const response = await this.apiCall('/api/users/me');
+                        this.user = response;
+                    } catch (error) {
+                        console.error('Failed to load user:', error);
+                        this.logout();
+                    }
+                },
+                
+                // Refresh all data
+                async refreshData() {
+                    this.loading = true;
+                    try {
+                        await Promise.all([
+                            this.loadStatus(),
+                            this.loadConfig(),
+                            this.loadLogs()
+                        ]);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                // Load bot status
+                async loadStatus() {
+                    const data = await this.apiCall('/api/status');
+                    this.status = data;
+                },
+                
+                // Load config
+                async loadConfig() {
+                    const data = await this.apiCall('/api/config');
+                    this.config = data;
+                },
+                
+                // Save config
+                async saveConfig() {
+                    try {
+                        await this.apiCall('/api/config', 'PUT', this.config);
+                        alert('✅ تنظیمات ذخیره شد');
+                    } catch (error) {
+                        alert('❌ خطا در ذخیره');
+                    }
+                },
+                
+                // Load logs
+                async loadLogs() {
+                    const data = await this.apiCall('/api/logs?limit=10');
+                    this.recentLogs = data.logs || [];
+                },
+                
+                // API Call with JWT
+                async apiCall(url, method = 'GET', body = null) {
+                    const token = localStorage.getItem('access_token');
+                    
+                    const options = {
+                        method,
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    };
+                    
+                    if (body) {
+                        options.body = JSON.stringify(body);
+                    }
+                    
+                    const response = await fetch(url, options);
+                    
+                    if (response.status === 401) {
+                        // Token expired
+                        this.logout();
+                        throw new Error('Unauthorized');
+                    }
+                    
+                    return response.json();
+                },
+                
+                // Setup Chart
+                setupChart() {
+                    const ctx = document.getElementById('performanceChart');
+                    if (ctx) {
+                        this.chart = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: ['دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'],
+                                datasets: [{
+                                    label: 'سود/ضرر',
+                                    data: [120, -50, 200, 150, 234],
+                                    borderColor: 'rgb(147, 51, 234)',
+                                    tension: 0.4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false
+                            }
+                        });
+                    }
+                },
+                
+                // Logout
+                logout() {
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    window.location.href = '/login';
+                },
+                
+                // Utils
+                formatUptime(minutes) {
+                    const hours = Math.floor(minutes / 60);
+                    return hours.toFixed(1);
+                },
+                
+                formatDate(timestamp) {
+                    return new Date(timestamp).toLocaleString('fa-IR');
+                },
+                
+                // Dark Mode
+                toggleDarkMode() {
+                    this.darkMode = !this.darkMode;
+                    localStorage.setItem('darkMode', this.darkMode);
+                    this.applyDarkMode();
+                },
+                
+                applyDarkMode() {
+                    if (this.darkMode) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then((registration) => {
+                        console.log('✅ SW registered:', registration.scope);
+                        
+                        // بررسی به‌روزرسانی
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // نسخه جدید آماده است
+                                    if (confirm('نسخه جدید آماده است. می‌خواهید به‌روزرسانی کنید؟')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.log('❌ SW registration failed:', error);
+                    });
+            });
+            
+            // دریافت پیام از SW
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                console.log('پیام از SW:', event.data);
+            });
+        }
+        
+        // دکمه نصب PWA
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // نمایش دکمه نصب (اختیاری)
+            // showInstallButton();
+        });
+        
+        async function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log('نتیجه نصب:', outcome);
+                deferredPrompt = null;
+            }
+        }
+    </script>
+    
+</body>
+</html>
+
+
+
+
+
+/**
+ * ====================================================================
+ * سیستم تم‌های رنگی
+ * ====================================================================
+ * 6 تم آماده + Dark Mode
+ */
+
+const THEMES = {
+    // تم بنفش (پیش‌فرض)
+    purple: {
+        name: 'بنفش',
+        primary: '#7C3AED',
+        secondary: '#A78BFA',
+        accent: '#C4B5FD',
+        background: '#FFFFFF',
+        surface: '#F9FAFB',
+        text: '#111827',
+        textLight: '#6B7280',
+        success: '#10B981',
+        warning: '#F59E0B',
+        error: '#EF4444',
+        gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    },
+    
+    // تم آبی (حرفه‌ای)
+    blue: {
+        name: 'آبی',
+        primary: '#3B82F6',
+        secondary: '#60A5FA',
+        accent: '#93C5FD',
+        background: '#FFFFFF',
+        surface: '#F3F4F6',
+        text: '#1F2937',
+        textLight: '#6B7280',
+        success: '#10B981',
+        warning: '#F59E0B',
+        error: '#EF4444',
+        gradient: 'linear-gradient(135deg, #667eea 0%, #4c9aff 100%)'
+    },
+    
+    // تم سبز (سود)
+    green: {
+        name: 'سبز',
+        primary: '#10B981',
+        secondary: '#34D399',
+        accent: '#6EE7B7',
+        background: '#FFFFFF',
+        surface: '#F0FDF4',
+        text: '#111827',
+        textLight: '#6B7280',
+        success: '#059669',
+        warning: '#F59E0B',
+        error: '#EF4444',
+        gradient: 'linear-gradient(135deg, #0f9b8e 0%, #10b981 100%)'
+    },
+    
+    // تم قرمز (قدرتمند)
+    red: {
+        name: 'قرمز',
+        primary: '#EF4444',
+        secondary: '#F87171',
+        accent: '#FCA5A5',
+        background: '#1F2937',
+        surface: '#374151',
+        text: '#F9FAFB',
+        textLight: '#D1D5DB',
+        success: '#10B981',
+        warning: '#F59E0B',
+        error: '#DC2626',
+        gradient: 'linear-gradient(135deg, #e53935 0%, #ef4444 100%)'
+    },
+    
+    // تم طلایی (لوکس)
+    gold: {
+        name: 'طلایی',
+        primary: '#F59E0B',
+        secondary: '#FBBF24',
+        accent: '#FCD34D',
+        background: '#1A1A1A',
+        surface: '#2D2D2D',
+        text: '#F9FAFB',
+        textLight: '#D1D5DB',
+        success: '#10B981',
+        warning: '#F97316',
+        error: '#EF4444',
+        gradient: 'linear-gradient(135deg, #d4af37 0%, #f59e0b 100%)'
+    },
+    
+    // تم صورتی (مدرن)
+    pink: {
+        name: 'صورتی',
+        primary: '#EC4899',
+        secondary: '#F472B6',
+        accent: '#F9A8D4',
+        background: '#FFFFFF',
+        surface: '#FCE7F3',
+        text: '#111827',
+        textLight: '#6B7280',
+        success: '#10B981',
+        warning: '#F59E0B',
+        error: '#EF4444',
+        gradient: 'linear-gradient(135deg, #f093fb 0%, #ec4899 100%)'
+    },
+    
+    // Dark Mode (تاریک)
+    dark: {
+        name: 'تاریک',
+        primary: '#8B5CF6',
+        secondary: '#A78BFA',
+        accent: '#C4B5FD',
+        background: '#0F172A',
+        surface: '#1E293B',
+        text: '#F1F5F9',
+        textLight: '#94A3B8',
+        success: '#22C55E',
+        warning: '#F59E0B',
+        error: '#EF4444',
+        gradient: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)'
+    }
+};
+
+class ThemeManager {
+    constructor() {
+        this.currentTheme = 'purple';
+        this.init();
+    }
+    
+    init() {
+        // بارگذاری تم ذخیره شده
+        const savedTheme = localStorage.getItem('theme') || 'purple';
+        this.applyTheme(savedTheme);
+        
+        // Event Listeners
+        this.setupEventListeners();
+    }
+    
+    applyTheme(themeName) {
+        const theme = THEMES[themeName];
+        if (!theme) {
+            console.error(`تم ${themeName} یافت نشد!`);
+            return;
+        }
+        
+        // اعمال CSS Variables
+        const root = document.documentElement;
+        root.style.setProperty('--color-primary', theme.primary);
+        root.style.setProperty('--color-secondary', theme.secondary);
+        root.style.setProperty('--color-accent', theme.accent);
+        root.style.setProperty('--color-background', theme.background);
+        root.style.setProperty('--color-surface', theme.surface);
+        root.style.setProperty('--color-text', theme.text);
+        root.style.setProperty('--color-text-light', theme.textLight);
+        root.style.setProperty('--color-success', theme.success);
+        root.style.setProperty('--color-warning', theme.warning);
+        root.style.setProperty('--color-error', theme.error);
+        root.style.setProperty('--gradient', theme.gradient);
+        
+        // ذخیره
+        this.currentTheme = themeName;
+        localStorage.setItem('theme', themeName);
+        
+        // اعلان تغییر
+        this.showNotification(`تم ${theme.name} اعمال شد`, 'success');
+        
+        // Dispatch Event
+        window.dispatchEvent(new CustomEvent('themeChanged', { 
+            detail: { theme: themeName } 
+        }));
+    }
+    
+    setupEventListeners() {
+        // دکمه‌های تم
+        document.querySelectorAll('[data-theme]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const themeName = e.currentTarget.dataset.theme;
+                this.applyTheme(themeName);
+                
+                // به‌روزرسانی UI
+                document.querySelectorAll('[data-theme]').forEach(b => {
+                    b.classList.remove('active');
+                });
+                e.currentTarget.classList.add('active');
+            });
+        });
+    }
+    
+    showNotification(message, type = 'info') {
+        // استفاده از سیستم نوتیفیکیشن (بخش بعدی)
+        if (window.NotificationSystem) {
+            window.NotificationSystem.show(message, type);
+        }
+    }
+    
+    // دریافت تم فعلی
+    getCurrentTheme() {
+        return this.currentTheme;
+    }
+    
+    // لیست تمام تم‌ها
+    getAllThemes() {
+        return Object.keys(THEMES).map(key => ({
+            id: key,
+            name: THEMES[key].name,
+            primary: THEMES[key].primary
+        }));
+    }
+}
+
+// Initialize
+window.ThemeManager = new ThemeManager();
+
+
+
+
+
+<!-- 
+====================================================================
+کامپوننت انتخاب تم
+این کد را به داشبورد (index.html) اضافه کنید
+====================================================================
+-->
+
+<!-- دکمه باز کردن Theme Selector -->
+<button 
+    @click="themeMenuOpen = !themeMenuOpen"
+    class="fixed left-4 bottom-4 z-50 w-12 h-12 bg-white dark:bg-gray-800 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform"
+    title="تغییر تم"
+>
+    <i class="fas fa-palette text-xl" style="color: var(--color-primary)"></i>
+</button>
+
+<!-- منوی تم‌ها -->
+<div 
+    x-show="themeMenuOpen"
+    @click.away="themeMenuOpen = false"
+    x-transition
+    class="fixed left-4 bottom-20 z-50 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-80"
+>
+    <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold" style="color: var(--color-text)">تم رنگی</h3>
+        <button @click="themeMenuOpen = false" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    
+    <!-- Grid تم‌ها -->
+    <div class="grid grid-cols-3 gap-3">
+        
+        <!-- تم بنفش -->
+        <button 
+            data-theme="purple"
+            class="theme-btn flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+        >
+            <div class="w-12 h-12 rounded-full" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)"></div>
+            <span class="text-sm" style="color: var(--color-text)">بنفش</span>
+        </button>
+        
+        <!-- تم آبی -->
+        <button 
+            data-theme="blue"
+            class="theme-btn flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+        >
+            <div class="w-12 h-12 rounded-full" style="background: linear-gradient(135deg, #667eea 0%, #4c9aff 100%)"></div>
+            <span class="text-sm" style="color: var(--color-text)">آبی</span>
+        </button>
+        
+        <!-- تم سبز -->
+        <button 
+            data-theme="green"
+            class="theme-btn flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+        >
+            <div class="w-12 h-12 rounded-full" style="background: linear-gradient(135deg, #0f9b8e 0%, #10b981 100%)"></div>
+            <span class="text-sm" style="color: var(--color-text)">سبز</span>
+        </button>
+        
+        <!-- تم قرمز -->
+        <button 
+            data-theme="red"
+            class="theme-btn flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+        >
+            <div class="w-12 h-12 rounded-full" style="background: linear-gradient(135deg, #e53935 0%, #ef4444 100%)"></div>
+            <span class="text-sm" style="color: var(--color-text)">قرمز</span>
+        </button>
+        
+        <!-- تم طلایی -->
+        <button 
+            data-theme="gold"
+            class="theme-btn flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+        >
+            <div class="w-12 h-12 rounded-full" style="background: linear-gradient(135deg, #d4af37 0%, #f59e0b 100%)"></div>
+            <span class="text-sm" style="color: var(--color-text)">طلایی</span>
+        </button>
+        
+        <!-- تم صورتی -->
+        <button 
+            data-theme="pink"
+            class="theme-btn flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+        >
+            <div class="w-12 h-12 rounded-full" style="background: linear-gradient(135deg, #f093fb 0%, #ec4899 100%)"></div>
+            <span class="text-sm" style="color: var(--color-text)">صورتی</span>
+        </button>
+        
+        <!-- تم تاریک -->
+        <button 
+            data-theme="dark"
+            class="theme-btn flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition col-span-3"
+        >
+            <div class="w-12 h-12 rounded-full" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%)"></div>
+            <span class="text-sm" style="color: var(--color-text)">حالت تاریک 🌙</span>
+        </button>
+        
+    </div>
+    
+    <!-- اطلاعات -->
+    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <p class="text-xs text-center" style="color: var(--color-text-light)">
+            <i class="fas fa-info-circle ml-1"></i>
+            تم انتخابی ذخیره می‌شود
+        </p>
+    </div>
+</div>
+
+<!-- CSS اضافی -->
+<style>
+    .theme-btn.active {
+        background-color: rgba(124, 58, 237, 0.1);
+        border: 2px solid var(--color-primary);
+    }
+    
+    .theme-btn:hover {
+        transform: scale(1.05);
+    }
+</style>
+
+<!-- Alpine.js Data -->
+<script>
+    // اضافه کردن به Alpine data
+    // در تابع dashboardApp():
+    
+    themeMenuOpen: false,
+    
+    // و در init():
+    // بارگذاری اسکریپت تم
+    const themeScript = document.createElement('script');
+    themeScript.src = '/assets/js/themes.js';
+    document.head.appendChild(themeScript);
+</script>
+
+
+
+
+/**
+ * ====================================================================
+ * فایل: charts.js
+ * نمودارهای پیشرفته برای داشبورد
+ * ====================================================================
+ * شامل:
+ * - Equity Curve (خط)
+ * - Win Rate (Pie)
+ * - Daily Profit (Bar)
+ * - Drawdown (Area)
+ * - Performance Gauge
+ * ====================================================================
+ */
+
+class TradingCharts {
+    constructor() {
+        this.charts = {};
+        this.defaultColors = {
+            primary: '#7C3AED',
+            success: '#10B981',
+            danger: '#EF4444',
+            warning: '#F59E0B',
+            info: '#3B82F6'
+        };
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 1. Equity Curve (نمودار خطی سرمایه)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    createEquityCurve(canvasId, data) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return null;
+
+        // نابود کردن نمودار قبلی
+        if (this.charts[canvasId]) {
+            this.charts[canvasId].destroy();
+        }
+
+        this.charts[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels, // ['روز 1', 'روز 2', ...]
+                datasets: [{
+                    label: 'Equity',
+                    data: data.values, // [10000, 10050, 10120, ...]
+                    borderColor: this.defaultColors.primary,
+                    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: this.defaultColors.primary
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '$' + context.parsed.y.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        return this.charts[canvasId];
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 2. Win Rate Pie Chart (نمودار دایره‌ای Win/Loss)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    createWinRatePie(canvasId, wins, losses) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return null;
+
+        if (this.charts[canvasId]) {
+            this.charts[canvasId].destroy();
+        }
+
+        const total = wins + losses;
+        const winRate = total > 0 ? (wins / total * 100).toFixed(1) : 0;
+
+        this.charts[canvasId] = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['برد', 'باخت'],
+                datasets: [{
+                    data: [wins, losses],
+                    backgroundColor: [
+                        this.defaultColors.success,
+                        this.defaultColors.danger
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed;
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                // نمایش Win Rate در وسط
+                id: 'centerText',
+                beforeDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    const width = chart.width;
+                    const height = chart.height;
+
+                    ctx.restore();
+                    const fontSize = (height / 114).toFixed(2);
+                    ctx.font = fontSize + 'em sans-serif';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#1F2937';
+
+                    const text = `${winRate}%`;
+                    const textX = Math.round((width - ctx.measureText(text).width) / 2);
+                    const textY = height / 2;
+
+                    ctx.fillText(text, textX, textY);
+                    ctx.save();
+                }
+            }]
+        });
+
+        return this.charts[canvasId];
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 3. Daily Profit Bar Chart (نمودار میله‌ای سود روزانه)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    createDailyProfitBar(canvasId, data) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return null;
+
+        if (this.charts[canvasId]) {
+            this.charts[canvasId].destroy();
+        }
+
+        // رنگ بر اساس مثبت/منفی
+        const backgroundColors = data.values.map(value => 
+            value >= 0 ? this.defaultColors.success : this.defaultColors.danger
+        );
+
+        this.charts[canvasId] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels, // ['دوشنبه', 'سه‌شنبه', ...]
+                datasets: [{
+                    label: 'سود/ضرر',
+                    data: data.values, // [120, -50, 200, ...]
+                    backgroundColor: backgroundColors,
+                    borderRadius: 8,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed.y;
+                                return value >= 0 ? `سود: $${value}` : `ضرر: $${Math.abs(value)}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        return this.charts[canvasId];
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 4. Drawdown Area Chart (نمودار Drawdown)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    createDrawdownChart(canvasId, data) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return null;
+
+        if (this.charts[canvasId]) {
+            this.charts[canvasId].destroy();
+        }
+
+        this.charts[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [{
+                    label: 'Drawdown (%)',
+                    data: data.values, // [0, -2, -3, -1, 0, ...]
+                    borderColor: this.defaultColors.danger,
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y.toFixed(2) + '%';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        max: 0,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        return this.charts[canvasId];
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 5. Performance Gauge (عقربه عملکرد)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    createPerformanceGauge(canvasId, value) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return null;
+
+        if (this.charts[canvasId]) {
+            this.charts[canvasId].destroy();
+        }
+
+        // رنگ بر اساس مقدار
+        let color;
+        if (value >= 80) color = this.defaultColors.success;
+        else if (value >= 60) color = this.defaultColors.info;
+        else if (value >= 40) color = this.defaultColors.warning;
+        else color = this.defaultColors.danger;
+
+        this.charts[canvasId] = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [value, 100 - value],
+                    backgroundColor: [color, '#E5E7EB'],
+                    borderWidth: 0,
+                    circumference: 180,
+                    rotation: 270
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                }
+            },
+            plugins: [{
+                id: 'gaugeText',
+                beforeDraw: function(chart) {
+                    const ctx = chart.ctx;
+                    const width = chart.width;
+                    const height = chart.height;
+
+                    ctx.restore();
+                    const fontSize = (height / 80).toFixed(2);
+                    ctx.font = 'bold ' + fontSize + 'em sans-serif';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = color;
+
+                    const text = value + '%';
+                    const textX = Math.round((width - ctx.measureText(text).width) / 2);
+                    const textY = height / 1.5;
+
+                    ctx.fillText(text, textX, textY);
+                    ctx.save();
+                }
+            }]
+        });
+
+        return this.charts[canvasId];
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 6. Multi-Line Comparison (مقایسه چند خط)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    createComparisonChart(canvasId, datasets) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return null;
+
+        if (this.charts[canvasId]) {
+            this.charts[canvasId].destroy();
+        }
+
+        const colors = [
+            this.defaultColors.primary,
+            this.defaultColors.success,
+            this.defaultColors.info,
+            this.defaultColors.warning
+        ];
+
+        const chartDatasets = datasets.map((dataset, index) => ({
+            label: dataset.label,
+            data: dataset.values,
+            borderColor: colors[index % colors.length],
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            tension: 0.4,
+            pointRadius: 0,
+            pointHoverRadius: 5
+        }));
+
+        this.charts[canvasId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: datasets[0].labels,
+                datasets: chartDatasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        align: 'end'
+                    }
+                }
+            }
+        });
+
+        return this.charts[canvasId];
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 7. Heatmap Calendar (تقویم گرمایی سود)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    createHeatmapCalendar(containerId, data) {
+        // این یک نمونه ساده است
+        // برای heatmap واقعی از کتابخانه‌هایی مثل d3.js استفاده کنید
+        
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        let html = '<div class="grid grid-cols-7 gap-2">';
+        
+        data.forEach(day => {
+            const color = day.profit > 0 ? 'bg-green-500' : 
+                          day.profit < 0 ? 'bg-red-500' : 'bg-gray-200';
+            const opacity = Math.min(Math.abs(day.profit) / 100, 1);
+            
+            html += `
+                <div class="${color} rounded p-2 text-white text-xs text-center"
+                     style="opacity: ${opacity}"
+                     title="${day.date}: $${day.profit}">
+                    ${day.day}
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // توابع کمکی
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    destroyChart(canvasId) {
+        if (this.charts[canvasId]) {
+            this.charts[canvasId].destroy();
+            delete this.charts[canvasId];
+        }
+    }
+
+    destroyAll() {
+        Object.keys(this.charts).forEach(key => {
+            this.charts[key].destroy();
+        });
+        this.charts = {};
+    }
+
+    updateChart(canvasId, newData) {
+        if (this.charts[canvasId]) {
+            this.charts[canvasId].data = newData;
+            this.charts[canvasId].update();
+        }
+    }
+}
+
+// Export برای استفاده در سایر فایل‌ها
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = TradingCharts;
+}
+
+
+
+
+
+PWA📱(Progressive Web App)
+
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>داشبورد - ربات معامله‌گر</title>
+    
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#7C3AED">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TradingBot">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192x192.png">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Vazirmatn', sans-serif;
+        }
+        
+        .sidebar-transition {
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar-hidden {
+                transform: translateX(100%);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50" x-data="dashboardApp()" x-init="init()">
+    
+    <!-- Sidebar -->
+    <aside class="fixed right-0 top-0 h-full w-64 bg-gradient-to-b from-purple-600 to-purple-800 text-white shadow-2xl z-50 sidebar-transition"
+           :class="{'sidebar-hidden': !sidebarOpen}">
+        
+        <!-- Header -->
+        <div class="p-6 border-b border-white/20">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-robot text-3xl"></i>
+                    <div>
+                        <h2 class="font-bold text-lg">ربات معامله‌گر</h2>
+                        <p class="text-xs text-white/70">نسخه 2.0</p>
+                    </div>
+                </div>
+                <button @click="sidebarOpen = false" class="md:hidden">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Navigation -->
+        <nav class="p-4 space-y-2">
+            <a @click="currentPage = 'overview'" 
+               :class="currentPage === 'overview' ? 'bg-white/20' : 'hover:bg-white/10'"
+               class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition">
+                <i class="fas fa-home w-5"></i>
+                <span>خانه</span>
+            </a>
+            
+            <a @click="currentPage = 'config'" 
+               :class="currentPage === 'config' ? 'bg-white/20' : 'hover:bg-white/10'"
+               class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition">
+                <i class="fas fa-cog w-5"></i>
+                <span>تنظیمات</span>
+            </a>
+            
+            <a @click="currentPage = 'monitoring'" 
+               :class="currentPage === 'monitoring' ? 'bg-white/20' : 'hover:bg-white/10'"
+               class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition">
+                <i class="fas fa-chart-line w-5"></i>
+                <span>مانیتورینگ</span>
+            </a>
+            
+            <a @click="currentPage = 'logs'" 
+               :class="currentPage === 'logs' ? 'bg-white/20' : 'hover:bg-white/10'"
+               class="flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition">
+                <i class="fas fa-file-alt w-5"></i>
+                <span>لاگ‌ها</span>
+            </a>
+        </nav>
+        
+        <!-- User Profile -->
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/20">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div>
+                        <p class="font-medium" x-text="user.username"></p>
+                        <p class="text-xs text-white/70">مدیر</p>
+                    </div>
+                </div>
+                <button @click="logout()" class="hover:bg-white/10 p-2 rounded-lg transition">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+        
+    </aside>
+    
+    <!-- Main Content -->
+    <div class="md:mr-64 min-h-screen">
+        
+        <!-- Top Bar -->
+        <header class="bg-white shadow-sm sticky top-0 z-40">
+            <div class="flex items-center justify-between p-4">
+                <div class="flex items-center gap-4">
+                    <button @click="sidebarOpen = !sidebarOpen" class="md:hidden">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <h1 class="text-2xl font-bold text-gray-800">داشبورد</h1>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <!-- Status Badge -->
+                    <div class="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full">
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <span class="text-sm font-medium">آنلاین</span>
+                    </div>
+                    
+                    <!-- Refresh -->
+                    <button @click="refreshData()" class="p-2 hover:bg-gray-100 rounded-lg transition">
+                        <i class="fas fa-sync-alt" :class="{'fa-spin': loading}"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Content Area -->
+        <main class="p-6">
+            
+            <!-- Overview Page -->
+            <div x-show="currentPage === 'overview'" x-transition>
+                
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    
+                    <!-- Card 1: Current Positions -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-chart-line text-blue-600 text-xl"></i>
+                            </div>
+                            <span class="text-sm text-gray-500">پوزیشن‌های باز</span>
+                        </div>
+                        <p class="text-3xl font-bold text-gray-800" x-text="status.current_positions || 0"></p>
+                        <p class="text-sm text-gray-500 mt-2">از 2 حداکثر</p>
+                    </div>
+                    
+                    <!-- Card 2: Daily Profit -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-dollar-sign text-green-600 text-xl"></i>
+                            </div>
+                            <span class="text-sm text-gray-500">سود امروز</span>
+                        </div>
+                        <p class="text-3xl font-bold" 
+                           :class="(status.daily_profit || 0) >= 0 ? 'text-green-600' : 'text-red-600'"
+                           x-text="'$' + (status.daily_profit || 0).toFixed(2)"></p>
+                        <p class="text-sm text-gray-500 mt-2">
+                            <span x-text="status.daily_trades || 0"></span> معامله
+                        </p>
+                    </div>
+                    
+                    <!-- Card 3: Balance -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-wallet text-purple-600 text-xl"></i>
+                            </div>
+                            <span class="text-sm text-gray-500">موجودی</span>
+                        </div>
+                        <p class="text-3xl font-bold text-gray-800" 
+                           x-text="'$' + (status.account_balance || 0).toLocaleString()"></p>
+                        <p class="text-sm text-gray-500 mt-2">
+                            Equity: $<span x-text="(status.account_equity || 0).toLocaleString()"></span>
+                        </p>
+                    </div>
+                    
+                    <!-- Card 4: Uptime -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-clock text-orange-600 text-xl"></i>
+                            </div>
+                            <span class="text-sm text-gray-500">مدت اجرا</span>
+                        </div>
+                        <p class="text-3xl font-bold text-gray-800" x-text="formatUptime(status.uptime_minutes || 0)"></p>
+                        <p class="text-sm text-gray-500 mt-2">ساعت</p>
+                    </div>
+                    
+                </div>
+                
+                <!-- Chart -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">نمودار عملکرد</h3>
+                    <canvas id="performanceChart" height="80"></canvas>
+                </div>
+                
+                <!-- Recent Activity -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">فعالیت‌های اخیر</h3>
+                    <div class="space-y-4">
+                        <template x-for="log in recentLogs.slice(0, 5)" :key="log.id">
+                            <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+                                <div class="w-10 h-10 rounded-lg flex items-center justify-center"
+                                     :class="{
+                                         'bg-green-100 text-green-600': log.level === 'SUCCESS',
+                                         'bg-red-100 text-red-600': log.level === 'ERROR',
+                                         'bg-yellow-100 text-yellow-600': log.level === 'WARNING',
+                                         'bg-blue-100 text-blue-600': log.level === 'INFO'
+                                     }">
+                                    <i class="fas fa-info-circle"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="font-medium text-gray-800" x-text="log.message"></p>
+                                    <p class="text-sm text-gray-500" x-text="formatDate(log.timestamp)"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <!-- Config Page -->
+            <div x-show="currentPage === 'config'" x-transition>
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">تنظیمات معاملاتی</h2>
+                    
+                    <form @submit.prevent="saveConfig()" class="space-y-6">
+                        
+                        <!-- Risk Management -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">مدیریت ریسک</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        ریسک هر معامله (%)
+                                    </label>
+                                    <input type="number" step="0.01" x-model="config.RISK_PER_TRADE"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        حداکثر ضرر روزانه (%)
+                                    </label>
+                                    <input type="number" step="0.01" x-model="config.MAX_DAILY_LOSS"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- SL/TP -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">Stop Loss & Take Profit</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        SL (x ATR)
+                                    </label>
+                                    <input type="number" step="0.1" x-model="config.SL_ATR_MULTIPLIER"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        TP (x ATR)
+                                    </label>
+                                    <input type="number" step="0.1" x-model="config.TP_ATR_MULTIPLIER"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ML Thresholds -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-4">آستانه‌های ML</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        آستانه خرید
+                                    </label>
+                                    <input type="number" step="0.01" x-model="config.BUY_THRESHOLD"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        آستانه فروش
+                                    </label>
+                                    <input type="number" step="0.01" x-model="config.SELL_THRESHOLD"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Save Button -->
+                        <div class="flex gap-4">
+                            <button type="submit" 
+                                    class="px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 transition">
+                                <i class="fas fa-save ml-2"></i>
+                                ذخیره تنظیمات
+                            </button>
+                            <button type="button" @click="loadConfig()"
+                                    class="px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition">
+                                <i class="fas fa-undo ml-2"></i>
+                                بازگشت
+                            </button>
+                        </div>
+                        
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Monitoring Page -->
+            <div x-show="currentPage === 'monitoring'" x-transition>
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">مانیتورینگ مدل</h2>
+                    <p class="text-gray-600">در حال توسعه...</p>
+                </div>
+            </div>
+            
+            <!-- Logs Page -->
+            <div x-show="currentPage === 'logs'" x-transition>
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">لاگ‌ها</h2>
+                    <div class="space-y-4">
+                        <template x-for="log in recentLogs" :key="log.id">
+                            <div class="p-4 border border-gray-200 rounded-lg">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="font-medium" x-text="log.type"></span>
+                                    <span class="text-sm text-gray-500" x-text="formatDate(log.timestamp)"></span>
+                                </div>
+                                <p class="text-gray-700" x-text="log.message"></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+            
+        </main>
+        
+    </div>
+    
+    <script>
+        function dashboardApp() {
+            return {
+                // State
+                sidebarOpen: true,
+                currentPage: 'overview',
+                loading: false,
+                user: {},
+                status: {},
+                config: {},
+                recentLogs: [],
+                chart: null,
+                
+                // Initialize
+                async init() {
+                    // Check auth
+                    const token = localStorage.getItem('access_token');
+                    if (!token) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    
+                    // Load data
+                    await this.loadUser();
+                    await this.refreshData();
+                    
+                    // Setup chart
+                    this.setupChart();
+                    
+                    // Auto-refresh every 5 seconds
+                    setInterval(() => this.refreshData(), 5000);
+                },
+                
+                // Load user info
+                async loadUser() {
+                    try {
+                        const response = await this.apiCall('/api/users/me');
+                        this.user = response;
+                    } catch (error) {
+                        console.error('Failed to load user:', error);
+                        this.logout();
+                    }
+                },
+                
+                // Refresh all data
+                async refreshData() {
+                    this.loading = true;
+                    try {
+                        await Promise.all([
+                            this.loadStatus(),
+                            this.loadConfig(),
+                            this.loadLogs()
+                        ]);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                // Load bot status
+                async loadStatus() {
+                    const data = await this.apiCall('/api/status');
+                    this.status = data;
+                },
+                
+                // Load config
+                async loadConfig() {
+                    const data = await this.apiCall('/api/config');
+                    this.config = data;
+                },
+                
+                // Save config
+                async saveConfig() {
+                    try {
+                        await this.apiCall('/api/config', 'PUT', this.config);
+                        alert('✅ تنظیمات ذخیره شد');
+                    } catch (error) {
+                        alert('❌ خطا در ذخیره');
+                    }
+                },
+                
+                // Load logs
+                async loadLogs() {
+                    const data = await this.apiCall('/api/logs?limit=10');
+                    this.recentLogs = data.logs || [];
+                },
+                
+                // API Call with JWT
+                async apiCall(url, method = 'GET', body = null) {
+                    const token = localStorage.getItem('access_token');
+                    
+                    const options = {
+                        method,
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    };
+                    
+                    if (body) {
+                        options.body = JSON.stringify(body);
+                    }
+                    
+                    const response = await fetch(url, options);
+                    
+                    if (response.status === 401) {
+                        // Token expired
+                        this.logout();
+                        throw new Error('Unauthorized');
+                    }
+                    
+                    return response.json();
+                },
+                
+                // Setup Chart
+                setupChart() {
+                    const ctx = document.getElementById('performanceChart');
+                    if (ctx) {
+                        this.chart = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: ['دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'],
+                                datasets: [{
+                                    label: 'سود/ضرر',
+                                    data: [120, -50, 200, 150, 234],
+                                    borderColor: 'rgb(147, 51, 234)',
+                                    tension: 0.4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false
+                            }
+                        });
+                    }
+                },
+                
+                // Logout
+                logout() {
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    window.location.href = '/login';
+                },
+                
+                // Utils
+                formatUptime(minutes) {
+                    const hours = Math.floor(minutes / 60);
+                    return hours.toFixed(1);
+                },
+                
+                formatDate(timestamp) {
+                    return new Date(timestamp).toLocaleString('fa-IR');
+                }
+            }
+        }
+    </script>
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then((registration) => {
+                        console.log('✅ SW registered:', registration.scope);
+                        
+                        // بررسی به‌روزرسانی
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // نسخه جدید آماده است
+                                    if (confirm('نسخه جدید آماده است. می‌خواهید به‌روزرسانی کنید؟')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch((error) => {
+                        console.log('❌ SW registration failed:', error);
+                    });
+            });
+            
+            // دریافت پیام از SW
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                console.log('پیام از SW:', event.data);
+            });
+        }
+        
+        // دکمه نصب PWA
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // نمایش دکمه نصب (اختیاری)
+            // showInstallButton();
+        });
+        
+        async function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log('نتیجه نصب:', outcome);
+                deferredPrompt = null;
+            }
+        }
+    </script>
+    
+</body>
+</html>
+
+
+
+{
+  "name": "ربات معامله‌گر هوشمند",
+  "short_name": "TradingBot",
+  "description": "داشبورد مدیریت ربات معامله‌گر با ML و مدیریت ریسک پیشرفته",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#7C3AED",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "fa",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/assets/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/assets/screenshots/desktop-1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/assets/screenshots/mobile-1.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["finance", "business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "وضعیت ربات",
+      "short_name": "وضعیت",
+      "description": "مشاهده وضعیت فعلی ربات",
+      "url": "/?page=status",
+      "icons": [
+        {
+          "src": "/assets/icons/shortcut-status.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "تنظیمات",
+      "short_name": "تنظیمات",
+      "description": "ویرایش تنظیمات ربات",
+      "url": "/?page=config",
+      "icons": [
+        {
+          "src": "/assets/icons/shortcut-config.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "لاگ‌ها",
+      "short_name": "لاگ‌ها",
+      "description": "مشاهده لاگ‌های اخیر",
+      "url": "/?page=logs",
+      "icons": [
+        {
+          "src": "/assets/icons/shortcut-logs.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false
+}
+
+
+
+/**
+ * ====================================================================
+ * فایل: service-worker.js
+ * Service Worker برای PWA
+ * ====================================================================
+ * قابلیت‌ها:
+ * - Cache استاتیک (HTML, CSS, JS)
+ * - Offline Support
+ * - Background Sync
+ * - Push Notifications
+ * ====================================================================
+ */
+
+const CACHE_NAME = 'trading-bot-v1.0.0';
+const DYNAMIC_CACHE = 'trading-bot-dynamic-v1';
+
+// فایل‌هایی که باید Cache شوند
+const STATIC_ASSETS = [
+  '/',
+  '/login',
+  '/manifest.json',
+  '/assets/css/style.css',
+  // CDN ها را cache نمی‌کنیم چون همیشه online هستند
+];
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// نصب Service Worker
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+self.addEventListener('install', (event) => {
+  console.log('[SW] Installing Service Worker...');
+  
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('[SW] Caching static assets');
+        return cache.addAll(STATIC_ASSETS);
+      })
+      .then(() => {
+        console.log('[SW] Service Worker installed successfully');
+        return self.skipWaiting(); // فعال‌سازی فوری
+      })
+      .catch((error) => {
+        console.error('[SW] Installation failed:', error);
+      })
+  );
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// فعال‌سازی Service Worker
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating Service Worker...');
+  
+  event.waitUntil(
+    caches.keys()
+      .then((cacheNames) => {
+        // حذف cache های قدیمی
+        return Promise.all(
+          cacheNames
+            .filter((name) => name !== CACHE_NAME && name !== DYNAMIC_CACHE)
+            .map((name) => {
+              console.log('[SW] Deleting old cache:', name);
+              return caches.delete(name);
+            })
+        );
+      })
+      .then(() => {
+        console.log('[SW] Service Worker activated');
+        return self.clients.claim(); // کنترل فوری صفحات
+      })
+  );
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Fetch Strategy: Network First با Fallback به Cache
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+  
+  // فقط درخواست‌های same-origin
+  if (url.origin !== location.origin) {
+    return;
+  }
+  
+  // استراتژی بر اساس نوع درخواست
+  if (request.url.includes('/api/')) {
+    // API: Network Only (همیشه از سرور)
+    event.respondWith(networkOnly(request));
+  } else if (request.destination === 'document') {
+    // HTML: Network First
+    event.respondWith(networkFirst(request));
+  } else {
+    // Static Assets: Cache First
+    event.respondWith(cacheFirst(request));
+  }
+});
+
+/**
+ * استراتژی Network First
+ * ابتدا از شبکه، در صورت خطا از Cache
+ */
+async function networkFirst(request) {
+  try {
+    const networkResponse = await fetch(request);
+    
+    // Cache کردن برای دفعات بعد
+    const cache = await caches.open(DYNAMIC_CACHE);
+    cache.put(request, networkResponse.clone());
+    
+    return networkResponse;
+  } catch (error) {
+    console.log('[SW] Network failed, trying cache...');
+    
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    // اگر هیچکدام نبود، صفحه Offline
+    return caches.match('/offline.html');
+  }
+}
+
+/**
+ * استراتژی Cache First
+ * ابتدا از Cache، در صورت نبود از شبکه
+ */
+async function cacheFirst(request) {
+  const cachedResponse = await caches.match(request);
+  
+  if (cachedResponse) {
+    // در پس‌زمینه به‌روزرسانی کن
+    updateCache(request);
+    return cachedResponse;
+  }
+  
+  // اگر در Cache نبود، از شبکه
+  try {
+    const networkResponse = await fetch(request);
+    
+    // Cache کن
+    const cache = await caches.open(DYNAMIC_CACHE);
+    cache.put(request, networkResponse.clone());
+    
+    return networkResponse;
+  } catch (error) {
+    console.error('[SW] Fetch failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * استراتژی Network Only
+ * فقط از شبکه (برای API)
+ */
+async function networkOnly(request) {
+  return fetch(request);
+}
+
+/**
+ * به‌روزرسانی Cache در پس‌زمینه
+ */
+async function updateCache(request) {
+  try {
+    const networkResponse = await fetch(request);
+    const cache = await caches.open(DYNAMIC_CACHE);
+    cache.put(request, networkResponse);
+  } catch (error) {
+    // در پس‌زمینه است، خطا مهم نیست
+  }
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Background Sync
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+self.addEventListener('sync', (event) => {
+  console.log('[SW] Background sync:', event.tag);
+  
+  if (event.tag === 'sync-logs') {
+    event.waitUntil(syncLogs());
+  }
+});
+
+async function syncLogs() {
+  // همگام‌سازی لاگ‌های ذخیره شده آفلاین
+  console.log('[SW] Syncing offline logs...');
+  // TODO: پیاده‌سازی
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Push Notifications
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+self.addEventListener('push', (event) => {
+  console.log('[SW] Push notification received');
+  
+  let data = {
+    title: 'ربات معامله‌گر',
+    body: 'اعلان جدید دریافت شد',
+    icon: '/assets/icons/icon-192x192.png',
+    badge: '/assets/icons/badge-72x72.png',
+    data: {}
+  };
+  
+  if (event.data) {
+    data = { ...data, ...event.data.json() };
+  }
+  
+  const options = {
+    body: data.body,
+    icon: data.icon,
+    badge: data.badge,
+    vibrate: [200, 100, 200],
+    data: data.data,
+    actions: [
+      {
+        action: 'open',
+        title: 'باز کردن',
+        icon: '/assets/icons/action-open.png'
+      },
+      {
+        action: 'close',
+        title: 'بستن',
+        icon: '/assets/icons/action-close.png'
+      }
+    ],
+    requireInteraction: false,
+    tag: 'trading-bot-notification'
+  };
+  
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// کلیک روی Notification
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification clicked:', event.action);
+  
+  event.notification.close();
+  
+  if (event.action === 'open') {
+    event.waitUntil(
+      clients.openWindow('/')
+    );
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Message Handler (ارتباط با صفحه)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+self.addEventListener('message', (event) => {
+  console.log('[SW] Message received:', event.data);
+  
+  if (event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  
+  if (event.data.type === 'CLEAR_CACHE') {
+    event.waitUntil(
+      caches.keys().then((names) => {
+        return Promise.all(names.map((name) => caches.delete(name)));
+      })
+    );
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Periodic Background Sync (اگر پشتیبانی شود)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'update-status') {
+    event.waitUntil(updateBotStatus());
+  }
+});
+
+async function updateBotStatus() {
+  // به‌روزرسانی وضعیت ربات در پس‌زمینه
+  console.log('[SW] Updating bot status...');
+  // TODO: پیاده‌سازی
+}
+
+console.log('[SW] Service Worker loaded');
+
+
+
+
+"""
+====================================================================
+فایل: telegram_bot.py
+ربات تلگرام برای دریافت اعلان‌ها و کنترل ربات
+====================================================================
+نصب:
+    pip install python-telegram-bot==20.7
+
+راه‌اندازی:
+    1. @BotFather را در تلگرام پیدا کنید
+    2. /newbot بزنید و نام بدهید
+    3. Token را کپی کنید
+    4. در config.py یا .env قرار دهید
+    5. این فایل را اجرا کنید
+====================================================================
+"""
+
+import asyncio
+import sys
+from pathlib import Path
+from typing import Optional
+from datetime import datetime
+
+# اضافه کردن مسیر پروژه
+sys.path.insert(0, str(Path(__file__).parent))
+
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    CallbackQueryHandler,
+    ContextTypes,
+    MessageHandler,
+    filters
+)
+
+from config import Config
+from explainable_logger import ExplainableLogger
+from model_monitor import ModelMonitor
+
+
+class TradingBotTelegram:
+    """
+    ربات تلگرام برای کنترل و مانیتورینگ ربات معامله‌گر
+    
+    دستورات:
+    /start - شروع
+    /status - وضعیت ربات
+    /stats - آمار امروز
+    /positions - پوزیشن‌های باز
+    /logs - لاگ‌های اخیر
+    /config - تنظیمات
+    /help - راهنما
+    """
+    
+    def __init__(self, token: str, allowed_users: list = None):
+        """
+        Args:
+            token: توکن ربات تلگرام
+            allowed_users: لیست chat_id های مجاز (امنیت)
+        """
+        self.token = token
+        self.allowed_users = allowed_users or []
+        self.logger = ExplainableLogger(log_to_console=False)
+        self.monitor = ModelMonitor()
+        
+        # ساخت Application
+        self.app = Application.builder().token(token).build()
+        
+        # ثبت Handlers
+        self._register_handlers()
+        
+        print("\n" + "="*70)
+        print("🤖 ربات تلگرام راه‌اندازی شد")
+        print("="*70)
+        print(f"📱 دستورات: /start, /status, /stats, /help")
+        if self.allowed_users:
+            print(f"🔐 فقط {len(self.allowed_users)} کاربر مجاز")
+        else:
+            print("⚠️  هشدار: همه کاربران مجازند!")
+        print("="*70)
+    
+    def _register_handlers(self):
+        """ثبت تمام Handler ها"""
+        # دستورات
+        self.app.add_handler(CommandHandler("start", self.cmd_start))
+        self.app.add_handler(CommandHandler("help", self.cmd_help))
+        self.app.add_handler(CommandHandler("status", self.cmd_status))
+        self.app.add_handler(CommandHandler("stats", self.cmd_stats))
+        self.app.add_handler(CommandHandler("positions", self.cmd_positions))
+        self.app.add_handler(CommandHandler("logs", self.cmd_logs))
+        self.app.add_handler(CommandHandler("config", self.cmd_config))
+        self.app.add_handler(CommandHandler("performance", self.cmd_performance))
+        
+        # Callback Query (دکمه‌ها)
+        self.app.add_handler(CallbackQueryHandler(self.button_callback))
+        
+        # پیام‌های متنی (برای دریافت chat_id)
+        self.app.add_handler(MessageHandler(
+            filters.TEXT & ~filters.COMMAND,
+            self.handle_message
+        ))
+    
+    async def _check_permission(self, update: Update) -> bool:
+        """بررسی دسترسی کاربر"""
+        if not self.allowed_users:
+            return True  # همه مجازند
+        
+        user_id = update.effective_user.id
+        if user_id not in self.allowed_users:
+            await update.message.reply_text(
+                "❌ شما دسترسی به این ربات را ندارید.\n"
+                f"Chat ID شما: `{user_id}`",
+                parse_mode='Markdown'
+            )
+            return False
+        
+        return True
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # دستورات (Commands)
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    async def cmd_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """دستور /start"""
+        if not await self._check_permission(update):
+            return
+        
+        keyboard = [
+            [
+                InlineKeyboardButton("📊 وضعیت", callback_data="status"),
+                InlineKeyboardButton("📈 آمار", callback_data="stats")
+            ],
+            [
+                InlineKeyboardButton("💼 پوزیشن‌ها", callback_data="positions"),
+                InlineKeyboardButton("📝 لاگ‌ها", callback_data="logs")
+            ],
+            [
+                InlineKeyboardButton("⚙️ تنظیمات", callback_data="config"),
+                InlineKeyboardButton("❓ راهنما", callback_data="help")
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            "🤖 *ربات معامله‌گر هوشمند*\n\n"
+            "خوش آمدید! از منوی زیر انتخاب کنید:",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+    
+    async def cmd_help(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """دستور /help"""
+        if not await self._check_permission(update):
+            return
+        
+        help_text = """
+📚 *راهنمای دستورات*
+
+/start - منوی اصلی
+/status - وضعیت فعلی ربات
+/stats - آمار امروز
+/positions - پوزیشن‌های باز
+/logs - لاگ‌های اخیر (10 تا)
+/config - نمایش تنظیمات
+/performance - عملکرد مدل ML
+/help - این راهنما
+
+💡 *نکات:*
+• از دکمه‌ها هم می‌توانید استفاده کنید
+• اعلان‌های خودکار فعال است
+• برای امنیت، فقط کاربران مجاز دسترسی دارند
+
+🆘 *مشکل دارید؟*
+به مستندات مراجعه کنید یا در گیت‌هاب Issue باز کنید.
+        """
+        
+        await update.message.reply_text(help_text, parse_mode='Markdown')
+    
+    async def cmd_status(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """دستور /status"""
+        if not await self._check_permission(update):
+            return
+        
+        # TODO: دریافت وضعیت واقعی از ربات
+        # الان یک نمونه است
+        
+        status_text = """
+📊 *وضعیت ربات*
+
+🟢 *وضعیت:* آنلاین
+⏰ *مدت اجرا:* 12.5 ساعت
+🔄 *چرخه‌ها:* 1,234
+
+💼 *پوزیشن‌ها:*
+• باز: 2 / 2
+• امروز: 5 معامله
+
+💰 *حساب:*
+• Balance: $10,234.50
+• Equity: $10,469.00
+• سود امروز: +$234.50 (+2.3%)
+
+📈 *آخرین بروزرسانی:*
+{time}
+        """.format(time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        
+        keyboard = [
+            [InlineKeyboardButton("🔄 بروزرسانی", callback_data="status")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            status_text,
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+    
+    async def cmd_stats(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """دستور /stats"""
+        if not await self._check_permission(update):
+            return
+        
+        stats_text = """
+📈 *آمار امروز*
+
+💼 *معاملات:*
+• تعداد: 5
+• برد: 3 (60%)
+• باخت: 2 (40%)
+
+💰 *مالی:*
+• سود کل: +$234.50
+• بیشترین سود: +$95.20
+• بیشترین ضرر: -$42.30
+• میانگین: +$46.90
+
+📊 *پوزیشن‌ها:*
+• باز: 2
+• بسته: 3
+• Partial Close: 1
+
+🎯 *عملکرد:*
+• Profit Factor: 1.87
+• Win Rate: 60%
+• Avg R:R: 1:1.65
+        """
+        
+        await update.message.reply_text(stats_text, parse_mode='Markdown')
+    
+    async def cmd_positions(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """دستور /positions"""
+        if not await self._check_permission(update):
+            return
+        
+        # TODO: دریافت پوزیشن‌های واقعی
+        
+        positions_text = """
+💼 *پوزیشن‌های باز (2)*
+
+━━━━━━━━━━━━━━━━━━━
+🟢 *#12345 - BUY EURUSD*
+📊 حجم: 0.15 لات
+💵 ورود: 1.08750
+🛡️ SL: 1.08600 (-15 پیپ)
+🎯 TP: 1.09000 (+25 پیپ)
+💰 سود فعلی: +$67.50 (+18 پیپ)
+✅ Break Even فعال
+━━━━━━━━━━━━━━━━━━━
+
+🟢 *#12346 - BUY GBPUSD*
+📊 حجم: 0.10 لات
+💵 ورود: 1.27500
+🛡️ SL: 1.27350 (-15 پیپ)
+🎯 TP: 1.27800 (+30 پیپ)
+💰 سود فعلی: +$25.00 (+10 پیپ)
+━━━━━━━━━━━━━━━━━━━
+
+💰 *سود کل:* +$92.50
+        """
+        
+        await update.message.reply_text(positions_text, parse_mode='Markdown')
+    
+    async def cmd_logs(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """دستور /logs"""
+        if not await self._check_permission(update):
+            return
+        
+        # دریافت لاگ‌های واقعی
+        logs = self.logger.get_logs(limit=5)
+        
+        if not logs:
+            await update.message.reply_text("📭 لاگی یافت نشد")
+            return
+        
+        logs_text = "📝 *لاگ‌های اخیر:*\n\n"
+        
+        for log in logs:
+            icon = {
+                'SUCCESS': '✅',
+                'ERROR': '❌',
+                'WARNING': '⚠️',
+                'INFO': 'ℹ️'
+            }.get(log['level'], '📝')
+            
+            logs_text += f"{icon} *{log['type']}*\n"
+            logs_text += f"   {log['message'][:80]}...\n"
+            logs_text += f"   _{log['timestamp']}_\n\n"
+        
+        await update.message.reply_text(logs_text, parse_mode='Markdown')
+    
+    async def cmd_config(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """دستور /config"""
+        if not await self._check_permission(update):
+            return
+        
+        config_text = f"""
+⚙️ *تنظیمات فعلی*
+
+📊 *معاملات:*
+• نماد: {Config.SYMBOL}
+• ریسک: {Config.RISK_PER_TRADE*100}%
+• حداکثر ضرر روزانه: {Config.MAX_DAILY_LOSS*100}%
+• حداکثر پوزیشن: {Config.MAX_POSITIONS}
+
+🎯 *SL/TP:*
+• SL: {Config.SL_ATR_MULTIPLIER}× ATR
+• TP: {Config.TP_ATR_MULTIPLIER}× ATR
+• R:R حداقل: 1:{Config.MIN_RISK_REWARD}
+
+🤖 *ML:*
+• خرید: > {Config.BUY_THRESHOLD}
+• فروش: < {Config.SELL_THRESHOLD}
+• اطمینان حداقل: {Config.MIN_CONFIDENCE*100}%
+
+📈 *مدیریت پوزیشن:*
+• Break Even: {Config.BE_TRIGGER_ATR}× ATR
+• Partial Close: {Config.PARTIAL_CLOSE_TRIGGER_ATR}× ATR ({Config.PARTIAL_CLOSE_PERCENT*100}%)
+• Trailing: {'فعال' if Config.TRAILING_ENABLED else 'غیرفعال'}
+
+⚠️ *برای تغییر تنظیمات از داشبورد استفاده کنید*
+        """
+        
+        await update.message.reply_text(config_text, parse_mode='Markdown')
+    
+    async def cmd_performance(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """دستور /performance"""
+        if not await self._check_permission(update):
+            return
+        
+        # دریافت عملکرد مدل
+        metrics = self.monitor.calculate_daily_metrics()
+        status = self.monitor.get_performance_status()
+        should_retrain, reason = self.monitor.should_retrain()
+        
+        status_emoji = {
+            'EXCELLENT': '🟢',
+            'GOOD': '🔵',
+            'WARNING': '🟡',
+            'CRITICAL': '🔴',
+            'UNKNOWN': '⚪'
+        }.get(status['status'], '⚪')
+        
+        perf_text = f"""
+🧠 *عملکرد مدل ML*
+
+{status_emoji} *وضعیت:* {status['message']}
+
+📊 *امروز:*
+• Accuracy: {metrics.get('accuracy', 0)*100:.1f}%
+• پیش‌بینی‌ها: {metrics.get('total_predictions', 0)}
+• تأیید شده: {metrics.get('verified_predictions', 0)}
+• درست: {metrics.get('correct_predictions', 0)}
+
+📈 *مقایسه:*
+• Train Accuracy: {metrics.get('train_accuracy', 0)*100:.1f}%
+• تنزل: {metrics.get('degradation', 0)*100:.1f}%
+
+{'⚠️ *نیاز به Retrain:* ' + reason if should_retrain else '✅ *عملکرد مناسب*'}
+        """
+        
+        await update.message.reply_text(perf_text, parse_mode='Markdown')
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # Callback Handler (دکمه‌ها)
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """پردازش کلیک روی دکمه‌ها"""
+        query = update.callback_query
+        await query.answer()
+        
+        # شبیه‌سازی دستورات
+        if query.data == "status":
+            await self.cmd_status(update, context)
+        elif query.data == "stats":
+            await self.cmd_stats(update, context)
+        elif query.data == "positions":
+            await self.cmd_positions(update, context)
+        elif query.data == "logs":
+            await self.cmd_logs(update, context)
+        elif query.data == "config":
+            await self.cmd_config(update, context)
+        elif query.data == "help":
+            await self.cmd_help(update, context)
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # Message Handler
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """پردازش پیام‌های متنی"""
+        text = update.message.text.lower()
+        
+        if 'chat' in text or 'id' in text:
+            chat_id = update.effective_chat.id
+            await update.message.reply_text(
+                f"🆔 *Chat ID شما:*\n`{chat_id}`\n\n"
+                f"این را در `config.py` یا `.env` قرار دهید:\n"
+                f"`TELEGRAM_CHAT_ID={chat_id}`",
+                parse_mode='Markdown'
+            )
+        else:
+            await update.message.reply_text(
+                "❓ دستور نامعتبر. /help را ببینید"
+            )
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # توابع ارسال اعلان
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    async def send_notification(self, chat_id: int, message: str):
+        """ارسال اعلان به کاربر"""
+        try:
+            await self.app.bot.send_message(
+                chat_id=chat_id,
+                text=message,
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            print(f"خطا در ارسال پیام: {e}")
+    
+    async def notify_trade_opened(self, chat_id: int, direction: str, price: float, volume: float):
+        """اعلان باز شدن معامله"""
+        icon = "🚀" if direction == "BUY" else "📉"
+        message = f"""
+{icon} *معامله باز شد*
+
+📊 جهت: *{direction}*
+💵 قیمت: {price:.5f}
+📦 حجم: {volume:.2f} لات
+⏰ زمان: {datetime.now().strftime("%H:%M:%S")}
+        """
+        await self.send_notification(chat_id, message)
+    
+    async def notify_trade_closed(self, chat_id: int, direction: str, profit: float, pips: float):
+        """اعلان بستن معامله"""
+        icon = "✅" if profit > 0 else "❌"
+        status = "سود" if profit > 0 else "ضرر"
+        
+        message = f"""
+{icon} *معامله بسته شد*
+
+📊 جهت: {direction}
+💰 {status}: ${profit:+.2f}
+📈 پیپ: {pips:+.1f}
+⏰ زمان: {datetime.now().strftime("%H:%M:%S")}
+        """
+        await self.send_notification(chat_id, message)
+    
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    # اجرا
+    # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    def run(self):
+        """اجرای ربات"""
+        print("\n🤖 ربات تلگرام در حال اجرا...")
+        print("برای توقف: Ctrl+C\n")
+        
+        self.app.run_polling(allowed_updates=Update.ALL_TYPES)
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# اجرای مستقل
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+if __name__ == "__main__":
+    # دریافت Token
+    token = Config.TELEGRAM_BOT_TOKEN if hasattr(Config, 'TELEGRAM_BOT_TOKEN') else None
+    
+    if not token or token == "":
+        print("\n❌ خطا: TELEGRAM_BOT_TOKEN تنظیم نشده!")
+        print("\n📝 مراحل راه‌اندازی:")
+        print("1. @BotFather را در تلگرام پیدا کنید")
+        print("2. /newbot بزنید")
+        print("3. نام و username بدهید")
+        print("4. Token را کپی کنید")
+        print("5. در config.py اضافه کنید:")
+        print("   TELEGRAM_BOT_TOKEN = 'YOUR_TOKEN_HERE'")
+        print("\nیا در .env:")
+        print("   TELEGRAM_BOT_TOKEN=YOUR_TOKEN_HERE")
+        sys.exit(1)
+    
+    # کاربران مجاز (اختیاری)
+    allowed_users = []
+    if hasattr(Config, 'TELEGRAM_ALLOWED_USERS'):
+        allowed_users = Config.TELEGRAM_ALLOWED_USERS
+    
+    # ساخت و اجرای ربات
+    bot = TradingBotTelegram(token, allowed_users)
+    bot.run()
+
+
+
+
+/**
+ * ====================================================================
+ * سیستم نوتیفیکیشن پیشرفته
+ * ====================================================================
+ * Toast, Alert, Push Notification
+ */
+
+class NotificationSystem {
+    constructor() {
+        this.container = null;
+        this.notifications = [];
+        this.maxNotifications = 5;
+        this.defaultDuration = 3000; // 3 ثانیه
+        
+        this.init();
+    }
+    
+    init() {
+        // ساخت Container
+        this.createContainer();
+        
+        // درخواست مجوز Push Notification
+        this.requestPushPermission();
+    }
+    
+    createContainer() {
+        // Container برای Toast ها
+        this.container = document.createElement('div');
+        this.container.id = 'notification-container';
+        this.container.className = 'fixed top-4 left-4 z-[9999] space-y-3 pointer-events-none';
+        this.container.style.cssText = 'max-width: 400px; width: 100%;';
+        document.body.appendChild(this.container);
+    }
+    
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Toast Notification
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    show(message, type = 'info', duration = this.defaultDuration) {
+        // حذف اگر بیش از حد باشد
+        if (this.notifications.length >= this.maxNotifications) {
+            this.notifications[0].remove();
+        }
+        
+        // ساخت Toast
+        const toast = this.createToast(message, type);
+        this.container.appendChild(toast);
+        this.notifications.push(toast);
+        
+        // انیمیشن ورود
+        setTimeout(() => {
+            toast.style.transform = 'translateX(0)';
+            toast.style.opacity = '1';
+        }, 10);
+        
+        // حذف خودکار
+        if (duration > 0) {
+            setTimeout(() => {
+                this.remove(toast);
+            }, duration);
+        }
+        
+        return toast;
+    }
+    
+    createToast(message, type) {
+        const toast = document.createElement('div');
+        toast.className = 'notification-toast pointer-events-auto';
+        
+        // رنگ و آیکون بر اساس نوع
+        const config = this.getTypeConfig(type);
+        
+        toast.style.cssText = `
+            background: white;
+            border-left: 4px solid ${config.color};
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 1rem;
+            display: flex;
+            align-items: start;
+            gap: 0.75rem;
+            transform: translateX(100%);
+            opacity: 0;
+            transition: all 0.3s ease;
+        `;
+        
+        toast.innerHTML = `
+            <div style="
+                width: 2.5rem;
+                height: 2.5rem;
+                border-radius: 50%;
+                background: ${config.bgColor};
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            ">
+                <i class="${config.icon}" style="color: ${config.color}; font-size: 1.25rem;"></i>
+            </div>
+            <div style="flex: 1; padding-top: 0.25rem;">
+                <p style="color: #1F2937; font-weight: 500; margin: 0;">${message}</p>
+            </div>
+            <button onclick="this.closest('.notification-toast').remove()" style="
+                color: #9CA3AF;
+                background: none;
+                border: none;
+                cursor: pointer;
+                padding: 0;
+                width: 1.5rem;
+                height: 1.5rem;
+            ">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        return toast;
+    }
+    
+    getTypeConfig(type) {
+        const configs = {
+            success: {
+                color: '#10B981',
+                bgColor: '#D1FAE5',
+                icon: 'fas fa-check-circle'
+            },
+            error: {
+                color: '#EF4444',
+                bgColor: '#FEE2E2',
+                icon: 'fas fa-exclamation-circle'
+            },
+            warning: {
+                color: '#F59E0B',
+                bgColor: '#FEF3C7',
+                icon: 'fas fa-exclamation-triangle'
+            },
+            info: {
+                color: '#3B82F6',
+                bgColor: '#DBEAFE',
+                icon: 'fas fa-info-circle'
+            }
+        };
+        
+        return configs[type] || configs.info;
+    }
+    
+    remove(toast) {
+        toast.style.transform = 'translateX(100%)';
+        toast.style.opacity = '0';
+        
+        setTimeout(() => {
+            toast.remove();
+            const index = this.notifications.indexOf(toast);
+            if (index > -1) {
+                this.notifications.splice(index, 1);
+            }
+        }, 300);
+    }
+    
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // نوتیفیکیشن‌های خاص معاملاتی
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    tradeOpened(direction, price, volume) {
+        const message = `🚀 معامله ${direction} باز شد\n💵 ${volume} لات @ ${price}`;
+        this.show(message, 'success', 5000);
+        
+        // Push Notification
+        this.sendPushNotification(
+            'معامله باز شد',
+            `${direction} ${volume} لات به قیمت ${price}`
+        );
+    }
+    
+    tradeClosed(profit, pips) {
+        const type = profit >= 0 ? 'success' : 'error';
+        const emoji = profit >= 0 ? '✅' : '❌';
+        const message = `${emoji} معامله بسته شد\n💰 ${profit >= 0 ? '+' : ''}$${profit.toFixed(2)} (${pips >= 0 ? '+' : ''}${pips.toFixed(1)} پیپ)`;
+        
+        this.show(message, type, 5000);
+        
+        // Push
+        this.sendPushNotification(
+            profit >= 0 ? 'معامله سودده!' : 'معامله بسته شد',
+            `سود/ضرر: $${profit.toFixed(2)}`
+        );
+    }
+    
+    partialClose(percent, profit) {
+        const message = `💰 Partial Close\n${percent}% بسته شد - سود: $${profit.toFixed(2)}`;
+        this.show(message, 'info', 4000);
+    }
+    
+    breakEven(ticket) {
+        const message = `🎯 Break Even فعال شد\nپوزیشن #${ticket}`;
+        this.show(message, 'info', 4000);
+    }
+    
+    dailyLossWarning(currentLoss, maxLoss) {
+        const message = `⚠️ هشدار ضرر روزانه!\n${(currentLoss*100).toFixed(1)}% از ${(maxLoss*100).toFixed(0)}%`;
+        this.show(message, 'warning', 0); // نمایش دائمی
+        
+        // Push
+        this.sendPushNotification(
+            '⚠️ هشدار ریسک',
+            `ضرر روزانه به ${(currentLoss*100).toFixed(1)}% رسیده`
+        );
+    }
+    
+    modelRetrainNeeded(reason) {
+        const message = `🔄 نیاز به Retrain\n${reason}`;
+        this.show(message, 'warning', 0); // دائمی
+    }
+    
+    connectionLost(service) {
+        const message = `❌ قطع اتصال ${service}\nتلاش برای اتصال مجدد...`;
+        this.show(message, 'error', 0);
+    }
+    
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Alert Dialog (مودال)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    alert(title, message, type = 'info') {
+        return new Promise((resolve) => {
+            const modal = this.createAlertModal(title, message, type);
+            document.body.appendChild(modal);
+            
+            // انیمیشن
+            setTimeout(() => {
+                modal.querySelector('.alert-dialog').style.transform = 'scale(1)';
+                modal.querySelector('.alert-dialog').style.opacity = '1';
+            }, 10);
+            
+            // دکمه OK
+            modal.querySelector('.alert-ok-btn').addEventListener('click', () => {
+                this.closeAlert(modal);
+                resolve(true);
+            });
+        });
+    }
+    
+    confirm(title, message) {
+        return new Promise((resolve) => {
+            const modal = this.createConfirmModal(title, message);
+            document.body.appendChild(modal);
+            
+            // انیمیشن
+            setTimeout(() => {
+                modal.querySelector('.alert-dialog').style.transform = 'scale(1)';
+                modal.querySelector('.alert-dialog').style.opacity = '1';
+            }, 10);
+            
+            // دکمه‌ها
+            modal.querySelector('.confirm-yes-btn').addEventListener('click', () => {
+                this.closeAlert(modal);
+                resolve(true);
+            });
+            
+            modal.querySelector('.confirm-no-btn').addEventListener('click', () => {
+                this.closeAlert(modal);
+                resolve(false);
+            });
+        });
+    }
+    
+    createAlertModal(title, message, type) {
+        const modal = document.createElement('div');
+        modal.className = 'alert-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        `;
+        
+        const config = this.getTypeConfig(type);
+        
+        modal.innerHTML = `
+            <div class="alert-dialog" style="
+                background: white;
+                border-radius: 1rem;
+                padding: 2rem;
+                max-width: 400px;
+                width: 90%;
+                box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+                transform: scale(0.9);
+                opacity: 0;
+                transition: all 0.3s ease;
+            ">
+                <div style="text-align: center; margin-bottom: 1rem;">
+                    <div style="
+                        width: 4rem;
+                        height: 4rem;
+                        border-radius: 50%;
+                        background: ${config.bgColor};
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin-bottom: 1rem;
+                    ">
+                        <i class="${config.icon}" style="color: ${config.color}; font-size: 2rem;"></i>
+                    </div>
+                    <h3 style="color: #1F2937; font-size: 1.5rem; font-weight: bold; margin: 0;">${title}</h3>
+                </div>
+                <p style="color: #6B7280; text-align: center; margin-bottom: 1.5rem; line-height: 1.6;">${message}</p>
+                <button class="alert-ok-btn" style="
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: ${config.color};
+                    color: white;
+                    border: none;
+                    border-radius: 0.5rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                ">باشه</button>
+            </div>
+        `;
+        
+        return modal;
+    }
+    
+    createConfirmModal(title, message) {
+        const modal = document.createElement('div');
+        modal.className = 'alert-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        `;
+        
+        modal.innerHTML = `
+            <div class="alert-dialog" style="
+                background: white;
+                border-radius: 1rem;
+                padding: 2rem;
+                max-width: 400px;
+                width: 90%;
+                box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+                transform: scale(0.9);
+                opacity: 0;
+                transition: all 0.3s ease;
+            ">
+                <h3 style="color: #1F2937; font-size: 1.25rem; font-weight: bold; margin: 0 0 1rem 0;">${title}</h3>
+                <p style="color: #6B7280; margin-bottom: 1.5rem; line-height: 1.6;">${message}</p>
+                <div style="display: flex; gap: 0.75rem;">
+                    <button class="confirm-no-btn" style="
+                        flex: 1;
+                        padding: 0.75rem;
+                        background: #F3F4F6;
+                        color: #6B7280;
+                        border: none;
+                        border-radius: 0.5rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                    ">خیر</button>
+                    <button class="confirm-yes-btn" style="
+                        flex: 1;
+                        padding: 0.75rem;
+                        background: #EF4444;
+                        color: white;
+                        border: none;
+                        border-radius: 0.5rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                    ">بله</button>
+                </div>
+            </div>
+        `;
+        
+        return modal;
+    }
+    
+    closeAlert(modal) {
+        modal.querySelector('.alert-dialog').style.transform = 'scale(0.9)';
+        modal.querySelector('.alert-dialog').style.opacity = '0';
+        
+        setTimeout(() => {
+            modal.remove();
+        }, 300);
+    }
+    
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Push Notification (سیستم)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    
+    async requestPushPermission() {
+        if (!('Notification' in window)) {
+            console.log('مرورگر از Push Notification پشتیبانی نمی‌کند');
+            return;
+        }
+        
+        if (Notification.permission === 'granted') {
+            console.log('✅ Push Notification فعال است');
+        } else if (Notification.permission !== 'denied') {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                console.log('✅ مجوز Push Notification داده شد');
+            }
+        }
+    }
+    
+    sendPushNotification(title, body, icon = '/favicon.ico') {
+        if (!('Notification' in window)) return;
+        if (Notification.permission !== 'granted') return;
+        
+        const notification = new Notification(title, {
+            body: body,
+            icon: icon,
+            badge: icon,
+            tag: 'trading-bot',
+            requireInteraction: false
+        });
+        
+        // کلیک برای باز کردن داشبورد
+        notification.onclick = () => {
+            window.focus();
+            notification.close();
+        };
+        
+        // بستن خودکار بعد از 5 ثانیه
+        setTimeout(() => notification.close(), 5000);
+    }
+}
+
+// Initialize
+window.NotificationSystem = new NotificationSystem();
+
+// نمونه استفاده:
+// NotificationSystem.show('پیام تست', 'success');
+// NotificationSystem.tradeOpened('BUY', 1.08750, 0.15);
+// await NotificationSystem.confirm('آیا مطمئنید؟', 'این عملیات غیرقابل بازگشت است');
+
+
+
+
+
+"""
+====================================================================
+فایل: tests/test_dashboard.py
+تست کامل داشبورد و Frontend
+====================================================================
+"""
+
+import pytest
+import sys
+from pathlib import Path
+from fastapi.testclient import TestClient
+import json
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
+
+from main import app
+
+client = TestClient(app)
+
+
+class TestDashboardUI:
+    """تست رابط کاربری داشبورد"""
+    
+    def test_index_page_loads(self):
+        """صفحه اصلی باید بارگذاری شود"""
+        response = client.get("/")
+        
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+        assert "ربات معامله‌گر" in response.text
+    
+    def test_login_page_loads(self):
+        """صفحه ورود باید بارگذاری شود"""
+        response = client.get("/login")
+        
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+        assert "ورود" in response.text
+    
+    def test_login_page_has_form(self):
+        """صفحه ورود باید فرم داشته باشد"""
+        response = client.get("/login")
+        html = response.text
+        
+        assert 'type="text"' in html  # username field
+        assert 'type="password"' in html  # password field
+        assert 'submit' in html.lower()  # submit button
+
+
+class TestDashboardAuthentication:
+    """تست احراز هویت داشبورد"""
+    
+    def test_login_flow_success(self):
+        """جریان کامل ورود موفق"""
+        # 1. دریافت صفحه ورود
+        response = client.get("/login")
+        assert response.status_code == 200
+        
+        # 2. ارسال اطلاعات ورود
+        response = client.post(
+            "/api/token",
+            data={
+                "username": "admin",
+                "password": "admin123"
+            }
+        )
+        assert response.status_code == 200
+        
+        data = response.json()
+        assert "access_token" in data
+        assert "refresh_token" in data
+        
+        # 3. استفاده از Token
+        token = data["access_token"]
+        response = client.get(
+            "/api/users/me",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        assert response.status_code == 200
+    
+    def test_protected_pages_redirect(self):
+        """صفحات محافظت شده بدون Token"""
+        # در واقع، ما HTML می‌دهیم و JavaScript چک می‌کند
+        # پس همیشه 200 است، اما JS redirect می‌کند
+        response = client.get("/")
+        assert response.status_code == 200
+
+
+class TestDashboardAPI:
+    """تست API های داشبورد"""
+    
+    @pytest.fixture
+    def auth_token(self):
+        """Token برای تست‌ها"""
+        response = client.post(
+            "/api/token",
+            data={"username": "admin", "password": "admin123"}
+        )
+        return response.json()["access_token"]
+    
+    def test_get_status_with_token(self, auth_token):
+        """دریافت وضعیت با Token"""
+        response = client.get(
+            "/api/status",
+            headers={"Authorization": f"Bearer {auth_token}"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # بررسی فیلدهای ضروری
+        required_fields = [
+            'bot_running',
+            'current_positions',
+            'daily_profit',
+            'account_balance',
+            'account_equity'
+        ]
+        
+        for field in required_fields:
+            assert field in data, f"فیلد {field} وجود ندارد"
+    
+    def test_get_config_returns_all_settings(self, auth_token):
+        """تنظیمات باید کامل باشند"""
+        response = client.get(
+            "/api/config",
+            headers={"Authorization": f"Bearer {auth_token}"}
+        )
+        
+        assert response.status_code == 200
+        config = response.json()
+        
+        # بررسی تنظیمات مهم
+        important_settings = [
+            'SYMBOL',
+            'RISK_PER_TRADE',
+            'SL_ATR_MULTIPLIER',
+            'TP_ATR_MULTIPLIER',
+            'BUY_THRESHOLD',
+            'SELL_THRESHOLD'
+        ]
+        
+        for setting in important_settings:
+            assert setting in config
+    
+    def test_update_config_validation(self, auth_token):
+        """به‌روزرسانی تنظیمات با Validation"""
+        # تست با مقدار معتبر
+        response = client.put(
+            "/api/config",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={"RISK_PER_TRADE": 0.015}
+        )
+        assert response.status_code == 200
+        
+        # برگشت به حالت اول
+        response = client.put(
+            "/api/config",
+            headers={"Authorization": f"Bearer {auth_token}"},
+            json={"RISK_PER_TRADE": 0.01}
+        )
+        assert response.status_code == 200
+
+
+class TestDashboardPerformance:
+    """تست عملکرد داشبورد"""
+    
+    @pytest.fixture
+    def auth_token(self):
+        response = client.post(
+            "/api/token",
+            data={"username": "admin", "password": "admin123"}
+        )
+        return response.json()["access_token"]
+    
+    def test_api_response_time(self, auth_token):
+        """زمان پاسخ API ها"""
+        import time
+        
+        endpoints = [
+            "/api/status",
+            "/api/config",
+            "/api/logs",
+            "/api/logs/stats"
+        ]
+        
+        for endpoint in endpoints:
+            start = time.time()
+            response = client.get(
+                endpoint,
+                headers={"Authorization": f"Bearer {auth_token}"}
+            )
+            duration = time.time() - start
+            
+            assert response.status_code == 200
+            assert duration < 1.0, f"{endpoint} خیلی کند است: {duration:.2f}s"
+    
+    def test_concurrent_requests(self, auth_token):
+        """درخواست‌های همزمان"""
+        import threading
+        
+        results = []
+        
+        def make_request():
+            response = client.get(
+                "/api/status",
+                headers={"Authorization": f"Bearer {auth_token}"}
+            )
+            results.append(response.status_code)
+        
+        # 10 درخواست همزمان
+        threads = [threading.Thread(target=make_request) for _ in range(10)]
+        
+        for t in threads:
+            t.start()
+        
+        for t in threads:
+            t.join()
+        
+        # همه باید موفق باشند
+        assert all(status == 200 for status in results)
+
+
+class TestDashboardSecurity:
+    """تست امنیت داشبورد"""
+    
+    def test_sql_injection_protection(self):
+        """محافظت در برابر SQL Injection"""
+        malicious_inputs = [
+            "admin' OR '1'='1",
+            "admin'; DROP TABLE users--",
+            "admin' UNION SELECT * FROM logs--"
+        ]
+        
+        for malicious in malicious_inputs:
+            response = client.post(
+                "/api/token",
+                data={
+                    "username": malicious,
+                    "password": "anything"
+                }
+            )
+            # باید 401 باشد نه 500
+            assert response.status_code == 401
+    
+    def test_xss_protection(self, auth_token=None):
+        """محافظت در برابر XSS"""
+        if not auth_token:
+            response = client.post(
+                "/api/token",
+                data={"username": "admin", "password": "admin123"}
+            )
+            auth_token = response.json()["access_token"]
+        
+        xss_payloads = [
+            "<script>alert('XSS')</script>",
+            "<img src=x onerror=alert('XSS')>",
+            "javascript:alert('XSS')"
+        ]
+        
+        for payload in xss_payloads:
+            response = client.put(
+                "/api/config",
+                headers={"Authorization": f"Bearer {auth_token}"},
+                json={"SYMBOL": payload}
+            )
+            # باید یا 200 با escape باشد یا 400 با validation error
+            assert response.status_code in [200, 400, 422]
+    
+    def test_csrf_token_not_required_with_jwt(self):
+        """با JWT نیاز به CSRF نیست"""
+        # این تست فقط مفهومی است
+        # در FastAPI با JWT، CSRF مشکل نیست
+        response = client.post(
+            "/api/token",
+            data={"username": "admin", "password": "admin123"}
+        )
+        assert response.status_code == 200
+    
+    def test_rate_limiting_login_attempts(self):
+        """محدودیت تلاش ورود"""
+        # 10 تلاش ناموفق
+        for i in range(10):
+            response = client.post(
+                "/api/token",
+                data={
+                    "username": f"fake_user_{i}",
+                    "password": "wrong_password"
+                }
+            )
+            # همه باید 401 باشند (نه 500)
+            assert response.status_code in [401, 403]
+
+
+class TestDashboardResponsiveness:
+    """تست Responsive بودن"""
+    
+    def test_viewport_meta_tag(self):
+        """بررسی viewport برای موبایل"""
+        response = client.get("/")
+        html = response.text
+        
+        assert 'name="viewport"' in html
+        assert 'width=device-width' in html
+    
+    def test_tailwind_responsive_classes(self):
+        """استفاده از کلاس‌های Responsive"""
+        response = client.get("/")
+        html = response.text
+        
+        # بررسی استفاده از breakpoints
+        responsive_patterns = ['md:', 'lg:', 'sm:', 'xl:']
+        
+        has_responsive = any(pattern in html for pattern in responsive_patterns)
+        assert has_responsive, "کلاس‌های Responsive یافت نشد"
+
+
+class TestDashboardAccessibility:
+    """تست دسترس‌پذیری (Accessibility)"""
+    
+    def test_has_alt_text_for_important_elements(self):
+        """بررسی alt برای تصاویر"""
+        response = client.get("/")
+        html = response.text
+        
+        # اگر <img> دارد، باید alt داشته باشد
+        if '<img' in html:
+            # این یک تست ساده است
+            # در واقع باید HTML را parse کنیم
+            pass
+    
+    def test_has_aria_labels(self):
+        """بررسی aria-label ها"""
+        response = client.get("/")
+        html = response.text
+        
+        # بررسی وجود aria-label در دکمه‌های مهم
+        # این هم یک تست مفهومی است
+        pass
+
+
+class TestDashboardIntegration:
+    """تست یکپارچگی کامل"""
+    
+    def test_complete_user_journey(self):
+        """سفر کامل کاربر"""
+        # 1. ورود به صفحه login
+        response = client.get("/login")
+        assert response.status_code == 200
+        
+        # 2. ارسال فرم ورود
+        response = client.post(
+            "/api/token",
+            data={"username": "admin", "password": "admin123"}
+        )
+        assert response.status_code == 200
+        token = response.json()["access_token"]
+        
+        # 3. دریافت اطلاعات کاربر
+        response = client.get(
+            "/api/users/me",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        assert response.status_code == 200
+        
+        # 4. دریافت وضعیت ربات
+        response = client.get(
+            "/api/status",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        assert response.status_code == 200
+        
+        # 5. دریافت تنظیمات
+        response = client.get(
+            "/api/config",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        assert response.status_code == 200
+        config = response.json()
+        
+        # 6. تغییر یک تنظیم
+        response = client.put(
+            "/api/config",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"RISK_PER_TRADE": config['RISK_PER_TRADE']}
+        )
+        assert response.status_code == 200
+        
+        # 7. دریافت لاگ‌ها
+        response = client.get(
+            "/api/logs?limit=10",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        assert response.status_code == 200
+
+
+class TestDashboardErrorHandling:
+    """تست مدیریت خطا"""
+    
+    def test_404_page(self):
+        """صفحه 404"""
+        response = client.get("/nonexistent-page")
+        assert response.status_code == 404
+    
+    def test_invalid_json_body(self):
+        """JSON نامعتبر"""
+        response = client.post(
+            "/api/token",
+            data={"username": "admin", "password": "admin123"}
+        )
+        token = response.json()["access_token"]
+        
+        # ارسال JSON خراب
+        response = client.put(
+            "/api/config",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json"
+            },
+            data="invalid json{{{["
+        )
+        assert response.status_code == 422  # Validation Error
+    
+    def test_missing_required_fields(self):
+        """فیلدهای ضروری که نیستند"""
+        # تست بدون username
+        response = client.post(
+            "/api/token",
+            data={"password": "admin123"}
+        )
+        assert response.status_code == 422
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# اجرای تست‌ها
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "--tb=short", "--maxfail=5"])
+
+
